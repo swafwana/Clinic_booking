@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Clinic Login</title>
+</head>
+<body>
+  <h1>Clinic Login</h1>
+  <form id="login-form">
+    {% csrf_token %}
+    <input type="text" id="username" placeholder="Username"><br>
+    <input type="password" id="password" placeholder="Password"><br>
+    <button type="submit">Log in</button>
+    <p id="error"></p>
+  </form>
+
+  <script>
+    const form = document.getElementById("login-form");
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+
+      const csrfToken = form.querySelector("[name=csrfmiddlewaretoken]").value;
+
+      const response = await fetch("/api/auth/login/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": csrfToken,
+        },
+        body: JSON.stringify({
+          username: document.getElementById("username").value,
+          password: document.getElementById("password").value,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        document.getElementById("error").textContent = data.detail || "Login failed.";
+        return;
+      }
+
+      const redirects = {
+        patient: "/doctors/",
+        doctor: "/doctor/schedule/",
+        admin: "/dashboard/",
+      };
+      window.location.href = redirects[data.role];
+    });
+  </script>
+</body>
+</html>
