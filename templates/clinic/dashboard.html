@@ -1,11 +1,7 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Admin dashboard</title>
-</head>
-<body>
+{% extends "base.html" %}
+{% block title %}Admin dashboard{% endblock %}
+{% block content %}
+
   <h1>Admin dashboard</h1>
   <p id="message"></p>
 
@@ -13,7 +9,7 @@
   <ul id="overview"></ul>
 
   <h2>Per doctor</h2>
-  <table border="1" cellpadding="6">
+  <table >
     <thead>
       <tr><th>Doctor</th><th>Specialty</th><th>Total</th><th>Booked</th></tr>
     </thead>
@@ -37,7 +33,7 @@
   <input type="date" id="f-date">
   <button id="f-clear">Clear</button>
 
-  <table border="1" cellpadding="6">
+  <table>
     <thead>
       <tr>
         <th>Date</th><th>Time</th><th>Patient</th>
@@ -46,7 +42,9 @@
     </thead>
     <tbody id="appt-rows"></tbody>
   </table>
+{% endblock %}
 
+{% block scripts %}
   <script>
     const message = document.getElementById("message");
     const overview = document.getElementById("overview");
@@ -145,5 +143,5 @@
     loadDoctorOptions();
     loadAppointments();
   </script>
+  {% endblock %}
 </body>
-</html>

@@ -1,82 +1,76 @@
-<!DOCTYPE html>
-<html lang="en">
+{% extends "base.html" %}
+{% block title %}Doctors{% endblock %}
+{% block content %}
+  <h1>Our Doctors</h1>
 
-<head>
-    <meta charset="UTF-8">
-    <title>Doctors</title>
-</head>
+  <label for="specialty-filter">Specialty:</label>
+  <select id="specialty-filter">
+    <option value="">All specialties</option>
+  </select>
 
-<body>
-    <h1>Our Doctors</h1>
-    <a href="/appointments/">My appointments</a>
+  <div id="doctor-list">Loading...</div>
+{% endblock %}
 
-    <label for="specialty-filter">Specialty:</label>
-    <select id="specialty-filter">
-        <option value="">All specialties</option>
-    </select>
+{% block scripts %}
+  <script>
+    const filter = document.getElementById("specialty-filter");
+    const list = document.getElementById("doctor-list");
 
-    <div id="doctor-list">Loading...</div>
+    async function loadSpecialties() {
+      const response = await fetch("/api/doctors/specialties/");
+      if (!response.ok) return;
 
-    <script>
-        const filter = document.getElementById("specialty-filter");
-        const list = document.getElementById("doctor-list");
+      const specialties = await response.json();
+      for (const specialty of specialties) {
+        const option = document.createElement("option");
+        option.value = specialty;
+        option.textContent = specialty;
+        filter.append(option);
+      }
+    }
 
-        async function loadSpecialties() {
-            const response = await fetch("/api/doctors/specialties/");
-            if (!response.ok) return;
+    async function loadDoctors() {
+      let url = "/api/doctors/";
+      if (filter.value) {
+        url += "?specialty=" + encodeURIComponent(filter.value);
+      }
 
-            const specialties = await response.json();
-            for (const specialty of specialties) {
-                const option = document.createElement("option");
-                option.value = specialty;
-                option.textContent = specialty;
-                filter.append(option);
-            }
-        }
+      const response = await fetch(url);
+      if (!response.ok) {
+        list.textContent = "Could not load doctors.";
+        return;
+      }
 
-        async function loadDoctors() {
-            let url = "/api/doctors/";
-            if (filter.value) {
-                url += "?specialty=" + encodeURIComponent(filter.value);
-            }
+      const doctors = await response.json();
+      list.textContent = "";
 
-            const response = await fetch(url);
-            if (!response.ok) {
-                list.textContent = "Could not load doctors.";
-                return;
-            }
+      if (doctors.length === 0) {
+        list.textContent = "No doctors found.";
+        return;
+      }
 
-            const doctors = await response.json();
-            list.textContent = "";
+      for (const doctor of doctors) {
+        const card = document.createElement("div");
+        card.className = "card";
 
-            if (doctors.length === 0) {
-                list.textContent = "No doctors found.";
-                return;
-            }
+        const name = document.createElement("h3");
+        name.textContent = doctor.name;
 
-            for (const doctor of doctors) {
-                const card = document.createElement("div");
+        const info = document.createElement("p");
+        info.textContent = doctor.specialty + " - " + doctor.bio;
 
-                const name = document.createElement("h3");
-                name.textContent = doctor.name;
+        const link = document.createElement("a");
+        link.href = "/doctors/" + doctor.id + "/book/";
+        link.textContent = "View slots and book";
 
-                const info = document.createElement("p");
-                info.textContent = doctor.specialty + " - " + doctor.bio;
+        card.append(name, info, link);
+        list.append(card);
+      }
+    }
 
-                const link = document.createElement("a");
-                link.href = "/doctors/" + doctor.id + "/book/";
-                link.textContent = "View slots and book";
+    filter.addEventListener("change", loadDoctors);
 
-                card.append(name, info, link);
-                list.append(card);
-            }
-        }
-
-        filter.addEventListener("change", loadDoctors);
-
-        loadSpecialties();
-        loadDoctors();
-    </script>
-</body>
-
-</html>
+    loadSpecialties();
+    loadDoctors();
+  </script>
+{% endblock %}

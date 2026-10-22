@@ -1,11 +1,6 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Book appointment</title>
-</head>
-<body>
-  {% csrf_token %}
+{% extends "base.html" %}
+{% block title %}Book appointment{% endblock %}
+{% block content %}
   <a href="/doctors/">&larr; Back to doctors</a>
   <h1 id="doctor-name">Doctor</h1>
 
@@ -20,7 +15,9 @@
   <input type="text" id="reason" maxlength="300"><br>
   <button type="button" id="book-btn" disabled>Book appointment</button>
   <p id="message"></p>
+{% endblock %}
 
+{% block scripts %}
   <script>
     const doctorId = {{ doctor_id }};
     const dateInput = document.getElementById("date");
@@ -118,5 +115,4 @@
     });
     loadDoctor();
   </script>
-</body>
-</html>
+{% endblock %}

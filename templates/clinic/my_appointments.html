@@ -1,16 +1,12 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>My appointments</title>
-</head>
-<body>
-  {% csrf_token %}
-  <a href="/doctors/">&larr; Back to doctors</a>
+{% extends "base.html" %}
+{% block title %}My appointments{% endblock %}
+{% block content %}
   <h1>My appointments</h1>
   <p id="message"></p>
   <div id="appointments">Loading...</div>
+{% endblock %}
 
+{% block scripts %}
   <script>
     const box = document.getElementById("appointments");
     const message = document.getElementById("message");
@@ -50,6 +46,7 @@
 
       for (const appt of appointments) {
         const card = document.createElement("div");
+        card.className = "card";
 
         const title = document.createElement("h3");
         title.textContent = appt.doctor_name;
@@ -83,5 +80,4 @@
 
     loadAppointments();
   </script>
-</body>
-</html>
+{% endblock %}

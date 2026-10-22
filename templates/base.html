@@ -1,0 +1,46 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Clinic{% endblock %} · Clinic Booking</title>
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+</head>
+<body>
+  {% csrf_token %}
+  <nav class="navbar">
+    <span class="brand">Clinic Booking</span>
+    {% if user.is_authenticated %}
+      {% if user.role == "patient" %}
+        <a href="/doctors/">Doctors</a>
+        <a href="/appointments/">My appointments</a>
+      {% elif user.role == "doctor" %}
+        <a href="/doctor/schedule/">My schedule</a>
+      {% elif user.role == "admin" %}
+        <a href="/dashboard/">Dashboard</a>
+      {% endif %}
+      <button id="logout-btn" type="button">Log out</button>
+    {% endif %}
+  </nav>
+
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+
+  {% if user.is_authenticated %}
+  <script>
+    document.getElementById("logout-btn").addEventListener("click", async () => {
+      const token = document.querySelector("[name=csrfmiddlewaretoken]").value;
+      await fetch("/api/auth/logout/", {
+        method: "POST",
+        headers: { "X-CSRFToken": token },
+      });
+      window.location.href = "/login/";
+    });
+  </script>
+  {% endif %}
+
+  {% block scripts %}{% endblock %}
+</body>
+</html>

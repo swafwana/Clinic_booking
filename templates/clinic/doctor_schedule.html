@@ -1,16 +1,10 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Doctor schedule</title>
-</head>
-<body>
-  {% csrf_token %}
+{% extends "base.html" %}
+{% block title %}My schedule{% endblock %}
+{% block content %}
   <h1>My schedule</h1>
   <p id="message"></p>
 
-  <table border="1" cellpadding="6">
+  <table>
     <thead>
       <tr>
         <th>Date</th><th>Time</th><th>Patient</th>
@@ -19,11 +13,14 @@
     </thead>
     <tbody id="rows"></tbody>
   </table>
-    <h2>Free slots</h2>
+
+  <h2>Free slots</h2>
   <label for="slot-date">Date:</label>
   <input type="date" id="slot-date">
   <ul id="slots"></ul>
+{% endblock %}
 
+{% block scripts %}
   <script>
     const csrfToken = document.querySelector("[name=csrfmiddlewaretoken]").value;
     const rows = document.getElementById("rows");
@@ -82,7 +79,8 @@
       message.textContent = res.ok ? "Updated." : (body.detail || "Something went wrong.");
       loadAppointments();
     }
-        const slotDate = document.getElementById("slot-date");
+
+    const slotDate = document.getElementById("slot-date");
     const slotList = document.getElementById("slots");
 
     async function loadSlots() {
@@ -114,5 +112,4 @@
 
     loadAppointments();
   </script>
-</body>
-</html>
+{% endblock %}
