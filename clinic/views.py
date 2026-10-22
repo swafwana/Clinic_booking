@@ -5,10 +5,10 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from .models import Doctor,Appointment
-from .serializers import DoctorSerializer,AppointmentCreateSerializer,AppointmentSerializer
+from .serializers import DoctorSerializer,AppointmentCreateSerializer,AppointmentSerializer,DoctorAppointmentSerializer
 from .services import get_free_slots
 from rest_framework import generics
-from accounts.permissions import IsPatient
+from accounts.permissions import IsPatient,IsDoctor
 from django.shortcuts import get_object_or_404
 from rest_framework import generics, status
 from rest_framework.response import Response
@@ -97,3 +97,59 @@ class AppointmentCancelView(APIView):
         appointment.status = Appointment.Status.CANCELLED
         appointment.save()
         return Response(AppointmentSerializer(appointment).data)
+
+class DoctorAppointmentListView(generics.ListAPIView):
+    serializer_class = DoctorAppointmentSerializer
+    permission_classes = [IsDoctor]
+
+    def get_queryset(self):
+        return (
+            Appointment.objects
+            .filter(doctor=self.request.user.doctor_profile)
+            .select_related("patient")
+            .order_by("date", "time")
+        )
+
+class DoctorAppointmentStatusView(APIView):
+    permission_classes = [IsDoctor]
+    new_status = None  # each route in urls.py sets this
+
+    def post(self, request, pk):
+        appointment = get_object_or_404(
+            Appointment.objects.select_related("patient"),
+            pk=pk,
+            doctor=request.user.doctor_profile,
+        )
+        if appointment.status != Appointment.Status.BOOKED:
+            return Response(
+                {"detail": "Only booked appointments can be updated."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        appointment.status = self.new_status
+        appointment.save()
+        return Response(DoctorAppointmentSerializer(appointment).data)
+class DoctorFreeSlotsView(APIView):
+    permission_classes = [IsDoctor]
+
+    def get(self, request):
+        raw = request.query_params.get("date")
+        if not raw:
+            return Response(
+                {"detail": "The date parameter is required (YYYY-MM-DD)."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        try:
+            day = date.fromisoformat(raw)
+        except ValueError:
+            return Response(
+                {"detail": "Invalid date. Use YYYY-MM-DD."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        doctor = request.user.doctor_profile
+        free = get_free_slots(doctor, day)
+        return Response({
+            "doctor": doctor.id,
+            "date": raw,
+            "slots": [t.strftime("%H:%M") for t in free],
+        })

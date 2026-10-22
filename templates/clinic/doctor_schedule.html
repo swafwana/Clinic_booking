@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Doctor schedule</title>
+</head>
+<body>
+  {% csrf_token %}
+  <h1>My schedule</h1>
+  <p id="message"></p>
+
+  <table border="1" cellpadding="6">
+    <thead>
+      <tr>
+        <th>Date</th><th>Time</th><th>Patient</th>
+        <th>Reason</th><th>Status</th><th>Actions</th>
+      </tr>
+    </thead>
+    <tbody id="rows"></tbody>
+  </table>
+    <h2>Free slots</h2>
+  <label for="slot-date">Date:</label>
+  <input type="date" id="slot-date">
+  <ul id="slots"></ul>
+
+  <script>
+    const csrfToken = document.querySelector("[name=csrfmiddlewaretoken]").value;
+    const rows = document.getElementById("rows");
+    const message = document.getElementById("message");
+
+    function textCell(text) {
+      const td = document.createElement("td");
+      td.textContent = text;
+      return td;
+    }
+
+    function actionButton(label, id, action) {
+      const btn = document.createElement("button");
+      btn.textContent = label;
+      btn.addEventListener("click", () => markAppointment(id, action));
+      return btn;
+    }
+
+    async function loadAppointments() {
+      const res = await fetch("/api/doctor/appointments/");
+      if (!res.ok) {
+        message.textContent = "Could not load appointments.";
+        return;
+      }
+      const data = await res.json();
+      rows.replaceChildren();
+
+      for (const a of data) {
+        const tr = document.createElement("tr");
+        tr.append(
+          textCell(a.date),
+          textCell(a.time.slice(0, 5)),
+          textCell(a.patient_name),
+          textCell(a.reason),
+          textCell(a.status)
+        );
+
+        const actions = document.createElement("td");
+        if (a.status === "booked") {
+          actions.append(
+            actionButton("Completed", a.id, "complete"),
+            actionButton("No-show", a.id, "no-show")
+          );
+        }
+        tr.append(actions);
+        rows.append(tr);
+      }
+    }
+
+    async function markAppointment(id, action) {
+      const res = await fetch(
+        `/api/doctor/appointments/${encodeURIComponent(id)}/${action}/`,
+        { method: "POST", headers: { "X-CSRFToken": csrfToken } }
+      );
+      const body = await res.json();
+      message.textContent = res.ok ? "Updated." : (body.detail || "Something went wrong.");
+      loadAppointments();
+    }
+        const slotDate = document.getElementById("slot-date");
+    const slotList = document.getElementById("slots");
+
+    async function loadSlots() {
+      slotList.replaceChildren();
+      if (!slotDate.value) return;
+
+      const res = await fetch(
+        `/api/doctor/slots/?date=${encodeURIComponent(slotDate.value)}`
+      );
+      const body = await res.json();
+      if (!res.ok) {
+        message.textContent = body.detail || "Could not load slots.";
+        return;
+      }
+      if (body.slots.length === 0) {
+        const li = document.createElement("li");
+        li.textContent = "No free slots on this date.";
+        slotList.append(li);
+        return;
+      }
+      for (const time of body.slots) {
+        const li = document.createElement("li");
+        li.textContent = time;
+        slotList.append(li);
+      }
+    }
+
+    slotDate.addEventListener("change", loadSlots);
+
+    loadAppointments();
+  </script>
+</body>
+</html>

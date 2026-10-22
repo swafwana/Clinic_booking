@@ -26,5 +26,6 @@ urlpatterns = [
     path("doctors/", TemplateView.as_view(template_name="clinic/doctors.html")),
     path("doctors/<int:doctor_id>/book/", TemplateView.as_view(template_name="clinic/book.html")),
     path("appointments/", TemplateView.as_view(template_name="clinic/my_appointments.html")),
+    path("doctor/schedule/", TemplateView.as_view(template_name="clinic/doctor_schedule.html")),
 
 ]
