@@ -1,20 +1,66 @@
 {% extends "base.html" %}
 {% block title %}Book appointment{% endblock %}
+
 {% block content %}
-  <a href="/doctors/">&larr; Back to doctors</a>
-  <h1 id="doctor-name">Doctor</h1>
+  <a href="/doctors/" class="back-link">
+    <i class="fa-solid fa-arrow-left"></i> Back to Doctors
+  </a>
 
-  <label for="date">Date:</label>
-  <input type="date" id="date">
+  <div class="booking-container">
+    <!-- Doctor Hero Card -->
+    <div class="doctor-hero-card">
+      <div class="doctor-hero-avatar">
+        <i class="fa-solid fa-user-doctor"></i>
+      </div>
+      <div class="doctor-hero-info">
+        <h1 id="doctor-name">Loading Doctor...</h1>
+        <p><i class="fa-solid fa-hospital"></i> Department Consultations · In-clinic Appointment</p>
+      </div>
+    </div>
 
-  <h3>Free slots</h3>
-  <div id="slots">Pick a date.</div>
-  <p id="selected"></p>
+    <!-- Booking Stepped Panel -->
+    <div class="booking-panel">
+      <!-- Step 1: Date -->
+      <div class="step-section">
+        <div class="step-title">
+          <span class="step-num">1</span>
+          <span>Select Consultation Date</span>
+        </div>
+        <div class="form-group" style="max-width: 320px;">
+          <input type="date" id="date" class="form-input">
+        </div>
+      </div>
 
-  <label for="reason">Reason (optional):</label><br>
-  <input type="text" id="reason" maxlength="300"><br>
-  <button type="button" id="book-btn" disabled>Book appointment</button>
-  <p id="message"></p>
+      <!-- Step 2: Time Slots -->
+      <div class="step-section">
+        <div class="step-title">
+          <span class="step-num">2</span>
+          <span>Choose an Available Time Slot</span>
+        </div>
+        <div id="slots" class="slots-grid">Pick a date above to display open slots.</div>
+        <div id="selected" class="selected-pill"></div>
+      </div>
+
+      <!-- Step 3: Reason for Visit -->
+      <div class="step-section">
+        <div class="step-title">
+          <span class="step-num">3</span>
+          <span>Consultation Details</span>
+        </div>
+        <div class="form-group">
+          <label for="reason"><i class="fa-regular fa-comment-dots"></i> Reason for visit (optional):</label>
+          <input type="text" id="reason" class="form-input" placeholder="e.g. Regular health checkup, consultation, follow-up" maxlength="300">
+        </div>
+      </div>
+
+      <!-- Step 4: Book CTA & Message -->
+      <button type="button" id="book-btn" class="btn btn-primary btn-lg btn-block" disabled>
+        <i class="fa-solid fa-calendar-check"></i> Book Appointment
+      </button>
+
+      <div id="message" class="booking-message"></div>
+    </div>
+  </div>
 {% endblock %}
 
 {% block scripts %}
@@ -44,14 +90,16 @@
     }
 
     async function loadSlots() {
-      selectedText.textContent = "";
+      selectedText.innerHTML = "";
       selectedTime = null;
       bookBtn.disabled = true;
 
       if (!dateInput.value) {
-        slotsBox.textContent = "Pick a date.";
+        slotsBox.innerHTML = `<span style="color: var(--text-muted);"><i class="fa-regular fa-calendar"></i> Pick a date above to display open slots.</span>`;
         return;
       }
+
+      slotsBox.innerHTML = `<span style="color: var(--text-muted);"><i class="fa-solid fa-spinner fa-spin"></i> Checking availability...</span>`;
 
       const response = await fetch(
         "/api/doctors/" + doctorId + "/slots/?date=" + dateInput.value
@@ -59,23 +107,28 @@
       const data = await response.json();
 
       if (!response.ok) {
-        slotsBox.textContent = data.detail || "Could not load slots.";
+        slotsBox.innerHTML = `<span style="color: #ef4444;"><i class="fa-solid fa-circle-exclamation"></i> ${data.detail || "Could not load slots."}</span>`;
         return;
       }
 
-      slotsBox.textContent = "";
+      slotsBox.innerHTML = "";
       if (data.slots.length === 0) {
-        slotsBox.textContent = "No free slots on this day.";
+        slotsBox.innerHTML = `<span style="color: #d97706;"><i class="fa-solid fa-ban"></i> No free slots available on this day. Please select another date.</span>`;
         return;
       }
 
       for (const time of data.slots) {
         const button = document.createElement("button");
         button.type = "button";
-        button.textContent = time;
+        button.className = "slot-pill";
+        button.innerHTML = `<i class="fa-regular fa-clock"></i> ${time.slice(0, 5)}`;
         button.addEventListener("click", () => {
+          // Deselect previous
+          document.querySelectorAll("#slots button").forEach(b => b.classList.remove("slot-selected"));
+          button.classList.add("slot-selected");
+
           selectedTime = time;
-          selectedText.textContent = "Selected: " + dateInput.value + " at " + time;
+          selectedText.innerHTML = `<div class="alert alert-info" style="margin: 0; padding: 0.5rem 0.85rem;"><i class="fa-solid fa-circle-check"></i> Selected: <strong>${dateInput.value}</strong> at <strong>${time.slice(0, 5)}</strong></div>`;
           bookBtn.disabled = false;
         });
         slotsBox.append(button);
@@ -84,6 +137,8 @@
 
     bookBtn.addEventListener("click", async () => {
       const csrfToken = document.querySelector("[name=csrfmiddlewaretoken]").value;
+      bookBtn.disabled = true;
+      bookBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Booking appointment...`;
 
       const response = await fetch("/api/appointments/", {
         method: "POST",
@@ -101,16 +156,27 @@
       const data = await response.json();
 
       if (!response.ok) {
-        message.textContent = errorText(data);
+        message.innerHTML = `<div class="alert alert-danger"><i class="fa-solid fa-triangle-exclamation"></i> ${errorText(data)}</div>`;
+        bookBtn.disabled = false;
+        bookBtn.innerHTML = `<i class="fa-solid fa-calendar-check"></i> Book Appointment`;
       } else {
-        message.textContent =
-          "Booked: " + data.date + " at " + data.time + " (status: " + data.status + ")";
+        message.innerHTML = `
+          <div class="alert alert-success">
+            <i class="fa-solid fa-circle-check"></i>
+            <div>
+              <strong>Appointment Confirmed!</strong><br>
+              Scheduled for ${data.date} at ${data.time.slice(0, 5)}. You can review it anytime under <a href="/appointments/" style="font-weight:700; text-decoration:underline;">My Appointments</a>.
+            </div>
+          </div>
+        `;
+        reasonInput.value = "";
+        bookBtn.innerHTML = `<i class="fa-solid fa-calendar-check"></i> Book Appointment`;
       }
       await loadSlots();
     });
 
     dateInput.addEventListener("change", () => {
-      message.textContent = "";
+      message.innerHTML = "";
       loadSlots();
     });
     loadDoctor();

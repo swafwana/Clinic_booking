@@ -1,9 +1,17 @@
 {% extends "base.html" %}
 {% block title %}My appointments{% endblock %}
+
 {% block content %}
-  <h1>My appointments</h1>
-  <p id="message"></p>
-  <div id="appointments">Loading...</div>
+  <div class="page-header">
+    <h1><i class="fa-solid fa-calendar-check"></i> My Appointments</h1>
+    <p>Track your upcoming doctor visits, review consultation history, and manage bookings.</p>
+  </div>
+
+  <div id="message" class="toast-message"></div>
+
+  <div id="appointments" class="appointments-grid">
+    <div class="empty-state"><i class="fa-solid fa-spinner fa-spin empty-state-icon"></i><p>Loading your appointments...</p></div>
+  </div>
 {% endblock %}
 
 {% block scripts %}
@@ -12,7 +20,7 @@
     const message = document.getElementById("message");
 
     async function cancelAppointment(id) {
-      if (!confirm("Cancel this appointment?")) return;
+      if (!confirm("Are you sure you want to cancel this appointment?")) return;
 
       const csrfToken = document.querySelector("[name=csrfmiddlewaretoken]").value;
       const response = await fetch("/api/appointments/" + id + "/cancel/", {
@@ -22,9 +30,9 @@
 
       if (!response.ok) {
         const data = await response.json();
-        message.textContent = data.detail || "Could not cancel.";
+        message.innerHTML = `<div class="alert alert-danger"><i class="fa-solid fa-circle-exclamation"></i> ${data.detail || "Could not cancel."}</div>`;
       } else {
-        message.textContent = "Appointment cancelled.";
+        message.innerHTML = `<div class="alert alert-success"><i class="fa-solid fa-circle-check"></i> Appointment has been cancelled.</div>`;
       }
       await loadAppointments();
     }
@@ -32,44 +40,81 @@
     async function loadAppointments() {
       const response = await fetch("/api/appointments/");
       if (!response.ok) {
-        box.textContent = "Could not load appointments.";
+        box.innerHTML = `<div class="empty-state"><i class="fa-solid fa-triangle-exclamation empty-state-icon"></i><p>Could not load appointments.</p></div>`;
         return;
       }
 
       const appointments = await response.json();
-      box.textContent = "";
+      box.innerHTML = "";
 
       if (appointments.length === 0) {
-        box.textContent = "You have no appointments yet.";
+        box.innerHTML = `
+          <div class="empty-state" style="grid-column: 1 / -1;">
+            <div class="empty-state-icon"><i class="fa-regular fa-calendar-xmark"></i></div>
+            <h3>No Appointments Yet</h3>
+            <p>You do not have any scheduled appointments with our doctors.</p>
+            <a href="/doctors/" class="btn btn-primary"><i class="fa-solid fa-plus"></i> Find a Doctor & Book</a>
+          </div>
+        `;
         return;
       }
 
       for (const appt of appointments) {
         const card = document.createElement("div");
-        card.className = "card";
+        card.className = "appointment-card";
 
-        const title = document.createElement("h3");
-        title.textContent = appt.doctor_name;
+        // Status badge class
+        const statusClass = "status-" + (appt.status || "booked");
 
-        const when = document.createElement("p");
-        when.textContent = appt.date + " at " + appt.time.slice(0, 5) + " - " + appt.status;
+        // Header: Doctor name + Status
+        const header = document.createElement("div");
+        header.className = "appointment-card-header";
 
-        const reason = document.createElement("p");
-        reason.textContent = appt.reason ? "Reason: " + appt.reason : "No reason given";
+        const title = document.createElement("div");
+        title.className = "appointment-doctor-name";
+        title.innerHTML = `<i class="fa-solid fa-user-doctor"></i> ${appt.doctor_name}`;
 
-        card.append(title, when, reason);
+        const badge = document.createElement("span");
+        badge.className = `status-badge ${statusClass}`;
+        badge.textContent = appt.status.replace("_", "-");
 
+        header.append(title, badge);
+
+        // Meta info (Date and Time)
+        const meta = document.createElement("div");
+        meta.className = "appointment-meta";
+
+        const dateRow = document.createElement("div");
+        dateRow.className = "appointment-meta-row";
+        dateRow.innerHTML = `<i class="fa-regular fa-calendar"></i> <span><strong>Date:</strong> ${appt.date}</span>`;
+
+        const timeRow = document.createElement("div");
+        timeRow.className = "appointment-meta-row";
+        timeRow.innerHTML = `<i class="fa-regular fa-clock"></i> <span><strong>Time:</strong> ${appt.time.slice(0, 5)}</span>`;
+
+        meta.append(dateRow, timeRow);
+
+        // Reason
+        const reasonBox = document.createElement("div");
+        reasonBox.className = "appointment-reason";
+        reasonBox.innerHTML = `<strong>Reason:</strong> ${appt.reason ? appt.reason : "General Consultation"}`;
+
+        card.append(header, meta, reasonBox);
+
+        // Actions
         if (appt.status === "booked") {
           const startsAt = new Date(appt.date + "T" + appt.time);
           if (startsAt > new Date()) {
             const button = document.createElement("button");
             button.type = "button";
-            button.textContent = "Cancel";
+            button.className = "btn btn-danger-soft btn-sm";
+            button.innerHTML = `<i class="fa-regular fa-circle-xmark"></i> Cancel Appointment`;
             button.addEventListener("click", () => cancelAppointment(appt.id));
             card.append(button);
           } else {
-            const note = document.createElement("p");
-            note.textContent = "Past appointment - waiting for the doctor to update it.";
+            const note = document.createElement("div");
+            note.className = "past-note";
+            note.innerHTML = `<i class="fa-regular fa-clock"></i> Past appointment - awaiting doctor confirmation`;
             card.append(note);
           }
         }

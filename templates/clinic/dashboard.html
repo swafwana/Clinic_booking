@@ -1,47 +1,87 @@
 {% extends "base.html" %}
 {% block title %}Admin dashboard{% endblock %}
+
 {% block content %}
+  <div class="page-header">
+    <h1><i class="fa-solid fa-chart-line"></i> Clinic Administration Dashboard</h1>
+    <p>Real-time analytics, specialist utilization, and clinic-wide appointment registry.</p>
+  </div>
 
-  <h1>Admin dashboard</h1>
-  <p id="message"></p>
+  <div id="message" class="toast-message"></div>
 
-  <h2>Overview</h2>
-  <ul id="overview"></ul>
+  <h2><i class="fa-solid fa-gauge-high"></i> Performance Overview</h2>
+  <ul id="overview" class="stats-grid">
+    <li class="stat-card">
+      <div class="stat-label">Loading Metrics</div>
+      <div class="stat-value"><i class="fa-solid fa-spinner fa-spin"></i></div>
+    </li>
+  </ul>
 
-  <h2>Per doctor</h2>
-  <table >
-    <thead>
-      <tr><th>Doctor</th><th>Specialty</th><th>Total</th><th>Booked</th></tr>
-    </thead>
-    <tbody id="doctor-rows"></tbody>
-  </table>
+  <h2><i class="fa-solid fa-user-doctor"></i> Doctor Workload & Availability</h2>
+  <div class="table-container">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Doctor</th>
+          <th>Specialty</th>
+          <th>Total Appointments</th>
+          <th>Active Booked</th>
+        </tr>
+      </thead>
+      <tbody id="doctor-rows">
+        <tr><td colspan="4" style="text-align:center; padding: 1.5rem;"><i class="fa-solid fa-spinner fa-spin"></i> Loading doctor stats...</td></tr>
+      </tbody>
+    </table>
+  </div>
 
-  <h2>All appointments</h2>
-  <label for="f-doctor">Doctor:</label>
-  <select id="f-doctor"><option value="">All</option></select>
+  <h2><i class="fa-solid fa-calendar-check"></i> Master Appointments Registry</h2>
+  
+  <div class="filter-card">
+    <div>
+      <label for="f-doctor"><i class="fa-solid fa-user-doctor"></i> Doctor:</label>
+      <select id="f-doctor" class="form-select">
+        <option value="">All Doctors</option>
+      </select>
+    </div>
 
-  <label for="f-status">Status:</label>
-  <select id="f-status">
-    <option value="">All</option>
-    <option value="booked">Booked</option>
-    <option value="cancelled">Cancelled</option>
-    <option value="completed">Completed</option>
-    <option value="no_show">No-show</option>
-  </select>
+    <div>
+      <label for="f-status"><i class="fa-solid fa-filter"></i> Status:</label>
+      <select id="f-status" class="form-select">
+        <option value="">All Statuses</option>
+        <option value="booked">Booked</option>
+        <option value="cancelled">Cancelled</option>
+        <option value="completed">Completed</option>
+        <option value="no_show">No-show</option>
+      </select>
+    </div>
 
-  <label for="f-date">Date:</label>
-  <input type="date" id="f-date">
-  <button id="f-clear">Clear</button>
+    <div>
+      <label for="f-date"><i class="fa-regular fa-calendar"></i> Date:</label>
+      <input type="date" id="f-date" class="form-input">
+    </div>
 
-  <table>
-    <thead>
-      <tr>
-        <th>Date</th><th>Time</th><th>Patient</th>
-        <th>Doctor</th><th>Reason</th><th>Status</th>
-      </tr>
-    </thead>
-    <tbody id="appt-rows"></tbody>
-  </table>
+    <button id="f-clear" class="btn btn-secondary btn-sm" type="button" style="margin-top: auto;">
+      <i class="fa-solid fa-rotate-left"></i> Reset Filters
+    </button>
+  </div>
+
+  <div class="table-container">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Time</th>
+          <th>Patient</th>
+          <th>Doctor</th>
+          <th>Reason</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="appt-rows">
+        <tr><td colspan="6" style="text-align:center; padding: 2rem;"><i class="fa-solid fa-spinner fa-spin"></i> Loading appointments...</td></tr>
+      </tbody>
+    </table>
+  </div>
 {% endblock %}
 
 {% block scripts %}
@@ -60,35 +100,76 @@
       return td;
     }
 
-    function addItem(list, text) {
+    function statusCell(status) {
+      const td = document.createElement("td");
+      const span = document.createElement("span");
+      span.className = `status-badge status-${status}`;
+      span.textContent = status.replace("_", "-");
+      td.append(span);
+      return td;
+    }
+
+    function addStatCard(list, label, value, icon) {
       const li = document.createElement("li");
-      li.textContent = text;
+      li.className = "stat-card";
+      li.innerHTML = `
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.6rem;">
+          <span class="stat-label">${label}</span>
+          <span style="font-size: 1.25rem; color: var(--text-muted);"><i class="${icon}"></i></span>
+        </div>
+        <div class="stat-value">${value}</div>
+      `;
       list.append(li);
     }
 
     async function loadStats() {
       const res = await fetch("/api/dashboard/stats/");
       if (!res.ok) {
-        message.textContent = "Could not load the dashboard numbers.";
+        message.innerHTML = `<div class="alert alert-danger"><i class="fa-solid fa-circle-exclamation"></i> Could not load the dashboard numbers.</div>`;
         return;
       }
       const s = await res.json();
 
       overview.replaceChildren();
-      addItem(overview, `Total appointments: ${s.total}`);
-      addItem(overview, `Today: ${s.today}`);
+      addStatCard(overview, "Total Appointments", s.total, "fa-solid fa-calendar-check");
+      addStatCard(overview, "Today's Appointments", s.today, "fa-regular fa-clock");
+
+      const statusIcons = {
+        booked: "fa-solid fa-business-time",
+        completed: "fa-solid fa-circle-check",
+        cancelled: "fa-solid fa-circle-xmark",
+        no_show: "fa-solid fa-user-slash",
+      };
+
       for (const [name, count] of Object.entries(s.by_status)) {
-        addItem(overview, `${name}: ${count}`);
+        const formattedLabel = name.replace("_", " ").toUpperCase();
+        addStatCard(overview, formattedLabel, count, statusIcons[name] || "fa-solid fa-chart-simple");
       }
 
       doctorRows.replaceChildren();
-      for (const d of s.per_doctor) {
+      if (s.per_doctor.length === 0) {
         const tr = document.createElement("tr");
-        tr.append(
-          textCell(d.doctor), textCell(d.specialty),
-          textCell(d.total), textCell(d.booked)
-        );
+        tr.innerHTML = `<td colspan="4" style="text-align:center; color:var(--text-muted); padding:1.5rem;">No doctors registered.</td>`;
         doctorRows.append(tr);
+      } else {
+        for (const d of s.per_doctor) {
+          const tr = document.createElement("tr");
+          
+          const docCell = document.createElement("td");
+          docCell.innerHTML = `<i class="fa-solid fa-user-doctor" style="color:var(--primary); margin-right: 0.4rem;"></i> <strong>${d.doctor}</strong>`;
+          
+          const specCell = document.createElement("td");
+          specCell.innerHTML = `<span class="specialty-badge">${d.specialty}</span>`;
+
+          const totalCell = document.createElement("td");
+          totalCell.textContent = d.total;
+
+          const bookedCell = document.createElement("td");
+          bookedCell.innerHTML = `<span class="status-badge status-booked">${d.booked} active</span>`;
+
+          tr.append(docCell, specCell, totalCell, bookedCell);
+          doctorRows.append(tr);
+        }
       }
     }
 
@@ -111,19 +192,29 @@
 
       const res = await fetch(`/api/dashboard/appointments/?${params}`);
       if (!res.ok) {
-        message.textContent = "Could not load appointments.";
+        message.innerHTML = `<div class="alert alert-danger"><i class="fa-solid fa-circle-exclamation"></i> Could not load appointments.</div>`;
         return;
       }
-      message.textContent = "";
+      message.innerHTML = "";
       const data = await res.json();
 
       apptRows.replaceChildren();
+      if (data.length === 0) {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td colspan="6" style="text-align: center; color: var(--text-muted); padding: 2.5rem 1rem;">No matching appointments found.</td>`;
+        apptRows.append(tr);
+        return;
+      }
+
       for (const a of data) {
         const tr = document.createElement("tr");
         tr.append(
-          textCell(a.date), textCell(a.time.slice(0, 5)),
-          textCell(a.patient_name), textCell(a.doctor_name),
-          textCell(a.reason), textCell(a.status)
+          textCell(a.date),
+          textCell(a.time.slice(0, 5)),
+          textCell(a.patient_name),
+          textCell(a.doctor_name),
+          textCell(a.reason || "-"),
+          statusCell(a.status)
         );
         apptRows.append(tr);
       }
@@ -143,5 +234,4 @@
     loadDoctorOptions();
     loadAppointments();
   </script>
-  {% endblock %}
-</body>
+{% endblock %}

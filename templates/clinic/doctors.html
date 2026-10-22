@@ -1,14 +1,20 @@
 {% extends "base.html" %}
 {% block title %}Doctors{% endblock %}
+
 {% block content %}
-  <h1>Our Doctors</h1>
+  <div class="page-header">
+    <h1><i class="fa-solid fa-user-doctor"></i> Our Medical Specialists</h1>
+    <p>Choose an experienced doctor and reserve your appointment slot in minutes.</p>
+  </div>
 
-  <label for="specialty-filter">Specialty:</label>
-  <select id="specialty-filter">
-    <option value="">All specialties</option>
-  </select>
+  <div class="filter-card">
+    <label for="specialty-filter"><i class="fa-solid fa-filter"></i> Filter by Specialty:</label>
+    <select id="specialty-filter" class="form-select">
+      <option value="">All specialties</option>
+    </select>
+  </div>
 
-  <div id="doctor-list">Loading...</div>
+  <div id="doctor-list" class="doctor-grid">Loading doctors...</div>
 {% endblock %}
 
 {% block scripts %}
@@ -35,35 +41,65 @@
         url += "?specialty=" + encodeURIComponent(filter.value);
       }
 
+      list.innerHTML = `<div class="empty-state"><i class="fa-solid fa-spinner fa-spin empty-state-icon"></i><p>Loading doctors...</p></div>`;
+
       const response = await fetch(url);
       if (!response.ok) {
-        list.textContent = "Could not load doctors.";
+        list.innerHTML = `<div class="empty-state"><i class="fa-solid fa-triangle-exclamation empty-state-icon"></i><p>Could not load doctors.</p></div>`;
         return;
       }
 
       const doctors = await response.json();
-      list.textContent = "";
+      list.innerHTML = "";
 
       if (doctors.length === 0) {
-        list.textContent = "No doctors found.";
+        list.innerHTML = `
+          <div class="empty-state" style="grid-column: 1 / -1;">
+            <div class="empty-state-icon"><i class="fa-solid fa-user-slash"></i></div>
+            <h3>No doctors found</h3>
+            <p>No specialists match the selected criteria at this moment.</p>
+          </div>
+        `;
         return;
       }
 
       for (const doctor of doctors) {
         const card = document.createElement("div");
-        card.className = "card";
+        card.className = "doctor-card";
+
+        // Top info with avatar
+        const top = document.createElement("div");
+        top.className = "doctor-card-top";
+
+        const avatar = document.createElement("div");
+        avatar.className = "doctor-avatar";
+        avatar.innerHTML = `<i class="fa-solid fa-stethoscope"></i>`;
+
+        const info = document.createElement("div");
+        info.className = "doctor-info";
 
         const name = document.createElement("h3");
         name.textContent = doctor.name;
 
-        const info = document.createElement("p");
-        info.textContent = doctor.specialty + " - " + doctor.bio;
+        const specialty = document.createElement("span");
+        specialty.className = "specialty-badge";
+        specialty.innerHTML = `<i class="fa-solid fa-award"></i> ${doctor.specialty}`;
 
+        info.append(name, specialty);
+        top.append(avatar, info);
+
+        // Bio
+        const bio = document.createElement("p");
+        bio.className = "doctor-bio";
+        bio.textContent = doctor.bio || "Experienced practitioner providing comprehensive consultations and patient care.";
+
+        // Action button
         const link = document.createElement("a");
+        link.className = "btn-book";
         link.href = "/doctors/" + doctor.id + "/book/";
-        link.textContent = "View slots and book";
+        link.innerHTML = `<i class="fa-regular fa-calendar-plus"></i> View Slots & Book`;
 
-        card.append(name, info, link);
+        card.append(top, bio, link);
         list.append(card);
       }
     }

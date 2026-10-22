@@ -4,29 +4,66 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}Clinic{% endblock %} · Clinic Booking</title>
+  <title>{% block title %}Clinic{% endblock %} &middot; Clinic Booking</title>
+  <!-- Google Fonts: Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <!-- Stylesheet -->
   <link rel="stylesheet" href="{% static 'css/style.css' %}">
+  {% block extra_head %}{% endblock %}
 </head>
 <body>
   {% csrf_token %}
-  <nav class="navbar">
-    <span class="brand">Clinic Booking</span>
-    {% if user.is_authenticated %}
-      {% if user.role == "patient" %}
-        <a href="/doctors/">Doctors</a>
-        <a href="/appointments/">My appointments</a>
-      {% elif user.role == "doctor" %}
-        <a href="/doctor/schedule/">My schedule</a>
-      {% elif user.role == "admin" %}
-        <a href="/dashboard/">Dashboard</a>
-      {% endif %}
-      <button id="logout-btn" type="button">Log out</button>
-    {% endif %}
-  </nav>
+  <header class="app-header">
+    <nav class="navbar">
+      <a href="{% if user.is_authenticated %}{% if user.role == 'doctor' %}/doctor/schedule/{% elif user.role == 'admin' %}/dashboard/{% else %}/doctors/{% endif %}{% else %}/login/{% endif %}" class="brand">
+        <span class="brand-icon"><i class="fa-solid fa-heart-pulse"></i></span>
+        <span>Clinic <span class="brand-subtitle">Booking</span></span>
+      </a>
 
-  <main>
+      {% if user.is_authenticated %}
+        <div class="nav-links">
+          {% if user.role == "patient" %}
+            <a href="/doctors/" class="nav-link"><i class="fa-solid fa-user-doctor"></i> Doctors</a>
+            <a href="/appointments/" class="nav-link"><i class="fa-solid fa-calendar-check"></i> My Appointments</a>
+          {% elif user.role == "doctor" %}
+            <a href="/doctor/schedule/" class="nav-link"><i class="fa-solid fa-calendar-days"></i> My Schedule</a>
+          {% elif user.role == "admin" %}
+            <a href="/dashboard/" class="nav-link"><i class="fa-solid fa-chart-line"></i> Dashboard</a>
+          {% endif %}
+        </div>
+
+        <div class="nav-user">
+          <div class="user-pill">
+            <span class="user-avatar"><i class="fa-solid fa-user"></i></span>
+            <span class="user-name">{{ user.get_full_name|default:user.username }}</span>
+            <span class="role-badge role-{{ user.role }}">{{ user.role|title }}</span>
+          </div>
+          <button id="logout-btn" type="button" class="btn-logout" title="Log out">
+            <i class="fa-solid fa-arrow-right-from-bracket"></i>
+            <span>Log out</span>
+          </button>
+        </div>
+      {% else %}
+        <div class="nav-links">
+          <a href="/login/" class="nav-link"><i class="fa-solid fa-right-to-bracket"></i> Log in</a>
+        </div>
+      {% endif %}
+    </nav>
+  </header>
+
+  <main class="main-content">
     {% block content %}{% endblock %}
   </main>
+
+  <footer class="app-footer">
+    <div class="footer-inner">
+      <p>&copy; 2026 Clinic Booking Portal. Providing healthcare appointment scheduling.</p>
+    </div>
+  </footer>
 
   {% if user.is_authenticated %}
   <script>

@@ -1,23 +1,45 @@
 {% extends "base.html" %}
 {% block title %}My schedule{% endblock %}
+
 {% block content %}
-  <h1>My schedule</h1>
-  <p id="message"></p>
+  <div class="page-header">
+    <h1><i class="fa-solid fa-calendar-days"></i> Doctor Appointment Schedule</h1>
+    <p>Manage your patient consultations, record appointment outcomes, and inspect availability.</p>
+  </div>
 
-  <table>
-    <thead>
-      <tr>
-        <th>Date</th><th>Time</th><th>Patient</th>
-        <th>Reason</th><th>Status</th><th>Actions</th>
-      </tr>
-    </thead>
-    <tbody id="rows"></tbody>
-  </table>
+  <div id="message" class="toast-message"></div>
 
-  <h2>Free slots</h2>
-  <label for="slot-date">Date:</label>
-  <input type="date" id="slot-date">
-  <ul id="slots"></ul>
+  <h2><i class="fa-solid fa-clipboard-list"></i> Appointments Roster</h2>
+  <div class="table-container">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th><i class="fa-regular fa-calendar"></i> Date</th>
+          <th><i class="fa-regular fa-clock"></i> Time</th>
+          <th><i class="fa-regular fa-user"></i> Patient</th>
+          <th><i class="fa-regular fa-comment-dots"></i> Reason</th>
+          <th><i class="fa-solid fa-circle-dot"></i> Status</th>
+          <th><i class="fa-solid fa-gear"></i> Actions</th>
+        </tr>
+      </thead>
+      <tbody id="rows">
+        <tr><td colspan="6" style="text-align:center; padding: 2rem;"><i class="fa-solid fa-spinner fa-spin"></i> Loading schedule...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card" style="margin-top: 2rem;">
+    <h2><i class="fa-regular fa-clock"></i> Inspect Free Slots by Date</h2>
+    <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem;">
+      <label for="slot-date"><i class="fa-regular fa-calendar-days"></i> Select Date:</label>
+      <input type="date" id="slot-date" class="form-input" style="max-width: 250px;">
+    </div>
+    <ul id="slots" class="slots-pill-list">
+      <li style="border:none; background:transparent; box-shadow:none; color:var(--text-muted);">
+        Select a date above to check available appointment openings.
+      </li>
+    </ul>
+  </div>
 {% endblock %}
 
 {% block scripts %}
@@ -32,9 +54,19 @@
       return td;
     }
 
-    function actionButton(label, id, action) {
+    function statusCell(status) {
+      const td = document.createElement("td");
+      const span = document.createElement("span");
+      span.className = `status-badge status-${status}`;
+      span.textContent = status.replace("_", "-");
+      td.append(span);
+      return td;
+    }
+
+    function actionButton(label, id, action, btnClass, iconClass) {
       const btn = document.createElement("button");
-      btn.textContent = label;
+      btn.className = `btn btn-sm ${btnClass}`;
+      btn.innerHTML = `<i class="${iconClass}"></i> ${label}`;
       btn.addEventListener("click", () => markAppointment(id, action));
       return btn;
     }
@@ -42,11 +74,18 @@
     async function loadAppointments() {
       const res = await fetch("/api/doctor/appointments/");
       if (!res.ok) {
-        message.textContent = "Could not load appointments.";
+        message.innerHTML = `<div class="alert alert-danger"><i class="fa-solid fa-circle-exclamation"></i> Could not load appointments.</div>`;
         return;
       }
       const data = await res.json();
       rows.replaceChildren();
+
+      if (data.length === 0) {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td colspan="6" style="text-align: center; color: var(--text-muted); padding: 2.5rem 1rem;">No appointments booked yet.</td>`;
+        rows.append(tr);
+        return;
+      }
 
       for (const a of data) {
         const tr = document.createElement("tr");
@@ -54,16 +93,18 @@
           textCell(a.date),
           textCell(a.time.slice(0, 5)),
           textCell(a.patient_name),
-          textCell(a.reason),
-          textCell(a.status)
+          textCell(a.reason || "None specified"),
+          statusCell(a.status)
         );
 
         const actions = document.createElement("td");
         if (a.status === "booked") {
           actions.append(
-            actionButton("Completed", a.id, "complete"),
-            actionButton("No-show", a.id, "no-show")
+            actionButton("Completed", a.id, "complete", "btn-success", "fa-solid fa-check"),
+            actionButton("No-show", a.id, "no-show", "btn-warning", "fa-solid fa-user-xmark")
           );
+        } else {
+          actions.innerHTML = `<span style="color: var(--text-muted); font-size: 0.85rem;"><i class="fa-solid fa-lock"></i> Finalized</span>`;
         }
         tr.append(actions);
         rows.append(tr);
@@ -76,7 +117,11 @@
         { method: "POST", headers: { "X-CSRFToken": csrfToken } }
       );
       const body = await res.json();
-      message.textContent = res.ok ? "Updated." : (body.detail || "Something went wrong.");
+      if (res.ok) {
+        message.innerHTML = `<div class="alert alert-success"><i class="fa-solid fa-circle-check"></i> Appointment marked as ${action}.</div>`;
+      } else {
+        message.innerHTML = `<div class="alert alert-danger"><i class="fa-solid fa-circle-exclamation"></i> ${body.detail || "Something went wrong."}</div>`;
+      }
       loadAppointments();
     }
 
@@ -92,18 +137,20 @@
       );
       const body = await res.json();
       if (!res.ok) {
-        message.textContent = body.detail || "Could not load slots.";
+        message.innerHTML = `<div class="alert alert-danger"><i class="fa-solid fa-circle-exclamation"></i> ${body.detail || "Could not load slots."}</div>`;
         return;
       }
       if (body.slots.length === 0) {
         const li = document.createElement("li");
-        li.textContent = "No free slots on this date.";
+        li.style.border = "none";
+        li.style.background = "transparent";
+        li.innerHTML = `<span style="color: var(--text-muted);"><i class="fa-solid fa-ban"></i> No free slots on this date.</span>`;
         slotList.append(li);
         return;
       }
       for (const time of body.slots) {
         const li = document.createElement("li");
-        li.textContent = time;
+        li.innerHTML = `<i class="fa-regular fa-clock"></i> ${time.slice(0, 5)}`;
         slotList.append(li);
       }
     }
