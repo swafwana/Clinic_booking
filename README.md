@@ -11,14 +11,12 @@ A full-stack clinic and appointment scheduling platform built with **Django 5** 
 * **Specialist Directory:** Browse active doctors, view medical specialties, and read practitioner bios.
 * **Dynamic Slot Booking:** Real-time calculation of available consultation slots based on doctor working hours, slot duration, and scheduled leaves.
 * **Appointment Management:** Track upcoming and historical visits, review consultation notes, and cancel appointments with immediate slot release.
-* **Sortable Appointments:** Toggle appointment cards between oldest and newest first.
 
 ### 🩺 Doctor Portal
 * **Daily Schedule & Roster:** View all booked patient consultations with patient details and visit reasons.
 * **Appointment Actions:** Mark visits as **Completed** or **No-Show** directly from the schedule.
 * **Self-Service Time-Off & Leaves:** Schedule vacations, conferences, or personal leaves. Days marked as time off automatically block appointment slots from patient bookings.
 * **Free Slots Inspector:** Check open consultation slots on any calendar date.
-* **Interactive Table Sorting:** Click the `Date` column header to toggle between ascending and descending order.
 
 ### ⚡ Administrator Dashboard
 * **Performance Overview (KPIs):** Real-time analytics displaying total visits, appointments today, and status breakdowns (Booked, Completed, Cancelled, No-Show).
