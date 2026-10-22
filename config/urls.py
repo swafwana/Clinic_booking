@@ -24,5 +24,6 @@ urlpatterns = [
     path("api/auth/", include("accounts.urls")),
     path("login/", TemplateView.as_view(template_name="accounts/login.html")),
     path("doctors/", TemplateView.as_view(template_name="clinics/doctors.html")),
+    path("doctors/<int:doctor_id>/book/", TemplateView.as_view(template_name="clinics/book.html")),
 
 ]

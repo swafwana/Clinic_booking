@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Book appointment</title>
+</head>
+<body>
+  <a href="/doctors/">&larr; Back to doctors</a>
+  <h1 id="doctor-name">Doctor</h1>
+
+  <label for="date">Date:</label>
+  <input type="date" id="date">
+
+  <h3>Free slots</h3>
+  <div id="slots">Pick a date.</div>
+  <p id="selected"></p>
+
+  <script>
+    const doctorId = {{ doctor_id }};
+    const dateInput = document.getElementById("date");
+    const slotsBox = document.getElementById("slots");
+    const selectedText = document.getElementById("selected");
+
+    dateInput.min = new Date().toLocaleDateString("en-CA");
+
+    async function loadDoctor() {
+      const response = await fetch("/api/doctors/" + doctorId + "/");
+      if (!response.ok) return;
+      const doctor = await response.json();
+      document.getElementById("doctor-name").textContent =
+        doctor.name + " (" + doctor.specialty + ")";
+    }
+
+    async function loadSlots() {
+      selectedText.textContent = "";
+      if (!dateInput.value) {
+        slotsBox.textContent = "Pick a date.";
+        return;
+      }
+
+      const response = await fetch(
+        "/api/doctors/" + doctorId + "/slots/?date=" + dateInput.value
+      );
+      const data = await response.json();
+
+      if (!response.ok) {
+        slotsBox.textContent = data.detail || "Could not load slots.";
+        return;
+      }
+
+      slotsBox.textContent = "";
+      if (data.slots.length === 0) {
+        slotsBox.textContent = "No free slots on this day.";
+        return;
+      }
+
+      for (const time of data.slots) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.textContent = time;
+        button.addEventListener("click", () => {
+          selectedText.textContent = "Selected: " + dateInput.value + " at " + time;
+        });
+        slotsBox.append(button);
+      }
+    }
+
+    dateInput.addEventListener("change", loadSlots);
+    loadDoctor();
+  </script>
+</body>
+</html>
