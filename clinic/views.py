@@ -5,10 +5,17 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from .models import Doctor,Appointment
-from .serializers import DoctorSerializer,AppointmentCreateSerializer,AppointmentSerializer,DoctorAppointmentSerializer
-from .services import get_free_slots
+from .serializers import (
+    DoctorSerializer,
+    AppointmentCreateSerializer,
+    AppointmentSerializer,
+    DoctorAppointmentSerializer,
+    AdminAppointmentSerializer,
+)
+from rest_framework.exceptions import ValidationError
+from .services import get_free_slots, get_dashboard_stats
 from rest_framework import generics
-from accounts.permissions import IsPatient,IsDoctor
+from accounts.permissions import IsPatient,IsDoctor,IsAdminRole
 from django.shortcuts import get_object_or_404
 from rest_framework import generics, status
 from rest_framework.response import Response
@@ -153,3 +160,38 @@ class DoctorFreeSlotsView(APIView):
             "date": raw,
             "slots": [t.strftime("%H:%M") for t in free],
         })
+
+class AdminStatsView(APIView):
+    permission_classes = [IsAdminRole]
+
+    def get(self, request):
+        return Response(get_dashboard_stats())
+
+class AdminAppointmentListView(generics.ListAPIView):
+    serializer_class = AdminAppointmentSerializer
+    permission_classes = [IsAdminRole]
+
+    def get_queryset(self):
+        qs = Appointment.objects.select_related("patient", "doctor__user")
+        params = self.request.query_params
+
+        doctor = params.get("doctor")
+        if doctor:
+            if not doctor.isdigit():
+                raise ValidationError({"doctor": "Must be a doctor id number."})
+            qs = qs.filter(doctor_id=doctor)
+
+        status_value = params.get("status")
+        if status_value:
+            if status_value not in Appointment.Status.values:
+                raise ValidationError({"status": "Unknown status."})
+            qs = qs.filter(status=status_value)
+
+        raw = params.get("date")
+        if raw:
+            try:
+                qs = qs.filter(date=date.fromisoformat(raw))
+            except ValueError:
+                raise ValidationError({"date": "Invalid date. Use YYYY-MM-DD."})
+
+        return qs.order_by("date", "time")

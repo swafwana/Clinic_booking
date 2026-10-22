@@ -2,7 +2,10 @@ from datetime import datetime, timedelta
 
 from django.utils import timezone
 
-from .models import Appointment, TimeOff
+from .models import Appointment, TimeOff,Doctor
+
+from django.db.models import Count, Q
+
 
 
 def get_free_slots(doctor, day):
@@ -40,3 +43,36 @@ def get_free_slots(doctor, day):
                 free.append(t)
             current += step
     return free
+
+def get_dashboard_stats():
+    today = timezone.localdate()
+
+    # Count per status. Start every status at 0 so none is missing.
+    by_status = {value: 0 for value, _label in Appointment.Status.choices}
+    for row in Appointment.objects.values("status").annotate(n=Count("id")):
+        by_status[row["status"]] = row["n"]
+
+    # One query that counts per doctor id.
+    rows = Appointment.objects.values("doctor_id").annotate(
+        total=Count("id"),
+        booked=Count("id", filter=Q(status=Appointment.Status.BOOKED)),
+    )
+    counts = {r["doctor_id"]: r for r in rows}
+
+    per_doctor = []
+    doctors = Doctor.objects.filter(is_active=True).select_related("user")
+    for d in doctors.order_by("user__first_name"):
+        c = counts.get(d.id, {"total": 0, "booked": 0})
+        per_doctor.append({
+            "doctor": f"Dr. {d.user.get_full_name() or d.user.username}",
+            "specialty": d.specialty,
+            "total": c["total"],
+            "booked": c["booked"],
+        })
+
+    return {
+        "total": Appointment.objects.count(),
+        "today": Appointment.objects.filter(date=today).count(),
+        "by_status": by_status,
+        "per_doctor": per_doctor,
+    }

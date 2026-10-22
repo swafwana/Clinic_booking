@@ -1,7 +1,15 @@
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
-from .views import AppointmentCancelView, AppointmentListCreateView, DoctorViewSet,DoctorAppointmentListView,DoctorAppointmentStatusView,DoctorFreeSlotsView
+from .views import (
+    AppointmentCancelView, 
+    AppointmentListCreateView,
+     DoctorViewSet,
+     DoctorAppointmentListView,
+     DoctorAppointmentStatusView,
+     DoctorFreeSlotsView,
+     AdminStatsView,
+     AdminAppointmentListView)
 from .models import Appointment
 router = DefaultRouter()
 router.register("doctors", DoctorViewSet, basename="doctor")
@@ -20,4 +28,6 @@ urlpatterns = [
         DoctorAppointmentStatusView.as_view(new_status=Appointment.Status.NO_SHOW),
     ),
     path("doctor/slots/", DoctorFreeSlotsView.as_view()),
+    path("dashboard/stats/", AdminStatsView.as_view()),
+    path("dashboard/appointments/", AdminAppointmentListView.as_view()),
 ]

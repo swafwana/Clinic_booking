@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Admin dashboard</title>
+</head>
+<body>
+  <h1>Admin dashboard</h1>
+  <p id="message"></p>
+
+  <h2>Overview</h2>
+  <ul id="overview"></ul>
+
+  <h2>Per doctor</h2>
+  <table border="1" cellpadding="6">
+    <thead>
+      <tr><th>Doctor</th><th>Specialty</th><th>Total</th><th>Booked</th></tr>
+    </thead>
+    <tbody id="doctor-rows"></tbody>
+  </table>
+
+  <h2>All appointments</h2>
+  <label for="f-doctor">Doctor:</label>
+  <select id="f-doctor"><option value="">All</option></select>
+
+  <label for="f-status">Status:</label>
+  <select id="f-status">
+    <option value="">All</option>
+    <option value="booked">Booked</option>
+    <option value="cancelled">Cancelled</option>
+    <option value="completed">Completed</option>
+    <option value="no_show">No-show</option>
+  </select>
+
+  <label for="f-date">Date:</label>
+  <input type="date" id="f-date">
+  <button id="f-clear">Clear</button>
+
+  <table border="1" cellpadding="6">
+    <thead>
+      <tr>
+        <th>Date</th><th>Time</th><th>Patient</th>
+        <th>Doctor</th><th>Reason</th><th>Status</th>
+      </tr>
+    </thead>
+    <tbody id="appt-rows"></tbody>
+  </table>
+
+  <script>
+    const message = document.getElementById("message");
+    const overview = document.getElementById("overview");
+    const doctorRows = document.getElementById("doctor-rows");
+    const apptRows = document.getElementById("appt-rows");
+    const fDoctor = document.getElementById("f-doctor");
+    const fStatus = document.getElementById("f-status");
+    const fDate = document.getElementById("f-date");
+
+    function textCell(text) {
+      const td = document.createElement("td");
+      td.textContent = text;
+      return td;
+    }
+
+    function addItem(list, text) {
+      const li = document.createElement("li");
+      li.textContent = text;
+      list.append(li);
+    }
+
+    async function loadStats() {
+      const res = await fetch("/api/dashboard/stats/");
+      if (!res.ok) {
+        message.textContent = "Could not load the dashboard numbers.";
+        return;
+      }
+      const s = await res.json();
+
+      overview.replaceChildren();
+      addItem(overview, `Total appointments: ${s.total}`);
+      addItem(overview, `Today: ${s.today}`);
+      for (const [name, count] of Object.entries(s.by_status)) {
+        addItem(overview, `${name}: ${count}`);
+      }
+
+      doctorRows.replaceChildren();
+      for (const d of s.per_doctor) {
+        const tr = document.createElement("tr");
+        tr.append(
+          textCell(d.doctor), textCell(d.specialty),
+          textCell(d.total), textCell(d.booked)
+        );
+        doctorRows.append(tr);
+      }
+    }
+
+    async function loadDoctorOptions() {
+      const res = await fetch("/api/doctors/");
+      if (!res.ok) return;
+      for (const d of await res.json()) {
+        const opt = document.createElement("option");
+        opt.value = d.id;
+        opt.textContent = d.name;
+        fDoctor.append(opt);
+      }
+    }
+
+    async function loadAppointments() {
+      const params = new URLSearchParams();
+      if (fDoctor.value) params.set("doctor", fDoctor.value);
+      if (fStatus.value) params.set("status", fStatus.value);
+      if (fDate.value) params.set("date", fDate.value);
+
+      const res = await fetch(`/api/dashboard/appointments/?${params}`);
+      if (!res.ok) {
+        message.textContent = "Could not load appointments.";
+        return;
+      }
+      message.textContent = "";
+      const data = await res.json();
+
+      apptRows.replaceChildren();
+      for (const a of data) {
+        const tr = document.createElement("tr");
+        tr.append(
+          textCell(a.date), textCell(a.time.slice(0, 5)),
+          textCell(a.patient_name), textCell(a.doctor_name),
+          textCell(a.reason), textCell(a.status)
+        );
+        apptRows.append(tr);
+      }
+    }
+
+    for (const el of [fDoctor, fStatus, fDate]) {
+      el.addEventListener("change", loadAppointments);
+    }
+    document.getElementById("f-clear").addEventListener("click", () => {
+      fDoctor.value = "";
+      fStatus.value = "";
+      fDate.value = "";
+      loadAppointments();
+    });
+
+    loadStats();
+    loadDoctorOptions();
+    loadAppointments();
+  </script>
+</body>
+</html>

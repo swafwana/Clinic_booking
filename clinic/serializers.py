@@ -50,3 +50,18 @@ class DoctorAppointmentSerializer(serializers.ModelSerializer):
 
     def get_patient_name(self, obj):
         return obj.patient.get_full_name() or obj.patient.username
+
+class AdminAppointmentSerializer(serializers.ModelSerializer):
+    patient_name = serializers.SerializerMethodField()
+    doctor_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Appointment
+        fields = ["id", "patient_name", "doctor_name", "date", "time", "reason", "status"]
+        read_only_fields = fields
+
+    def get_patient_name(self, obj):
+        return obj.patient.get_full_name() or obj.patient.username
+
+    def get_doctor_name(self, obj):
+        return f"Dr. {obj.doctor.user.get_full_name() or obj.doctor.user.username}"
