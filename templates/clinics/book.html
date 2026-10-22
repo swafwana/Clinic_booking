@@ -5,6 +5,7 @@
   <title>Book appointment</title>
 </head>
 <body>
+  {% csrf_token %}
   <a href="/doctors/">&larr; Back to doctors</a>
   <h1 id="doctor-name">Doctor</h1>
 
@@ -15,13 +16,27 @@
   <div id="slots">Pick a date.</div>
   <p id="selected"></p>
 
+  <label for="reason">Reason (optional):</label><br>
+  <input type="text" id="reason" maxlength="300"><br>
+  <button type="button" id="book-btn" disabled>Book appointment</button>
+  <p id="message"></p>
+
   <script>
     const doctorId = {{ doctor_id }};
     const dateInput = document.getElementById("date");
     const slotsBox = document.getElementById("slots");
     const selectedText = document.getElementById("selected");
+    const reasonInput = document.getElementById("reason");
+    const bookBtn = document.getElementById("book-btn");
+    const message = document.getElementById("message");
+    let selectedTime = null;
 
     dateInput.min = new Date().toLocaleDateString("en-CA");
+
+    function errorText(data) {
+      if (data.detail) return data.detail;
+      return Object.values(data).flat().join(" ");
+    }
 
     async function loadDoctor() {
       const response = await fetch("/api/doctors/" + doctorId + "/");
@@ -33,6 +48,9 @@
 
     async function loadSlots() {
       selectedText.textContent = "";
+      selectedTime = null;
+      bookBtn.disabled = true;
+
       if (!dateInput.value) {
         slotsBox.textContent = "Pick a date.";
         return;
@@ -59,13 +77,45 @@
         button.type = "button";
         button.textContent = time;
         button.addEventListener("click", () => {
+          selectedTime = time;
           selectedText.textContent = "Selected: " + dateInput.value + " at " + time;
+          bookBtn.disabled = false;
         });
         slotsBox.append(button);
       }
     }
 
-    dateInput.addEventListener("change", loadSlots);
+    bookBtn.addEventListener("click", async () => {
+      const csrfToken = document.querySelector("[name=csrfmiddlewaretoken]").value;
+
+      const response = await fetch("/api/appointments/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": csrfToken,
+        },
+        body: JSON.stringify({
+          doctor: doctorId,
+          date: dateInput.value,
+          time: selectedTime,
+          reason: reasonInput.value,
+        }),
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        message.textContent = errorText(data);
+      } else {
+        message.textContent =
+          "Booked: " + data.date + " at " + data.time + " (status: " + data.status + ")";
+      }
+      await loadSlots();
+    });
+
+    dateInput.addEventListener("change", () => {
+      message.textContent = "";
+      loadSlots();
+    });
     loadDoctor();
   </script>
 </body>

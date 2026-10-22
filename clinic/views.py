@@ -5,9 +5,11 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from .models import Doctor
-from .serializers import DoctorSerializer
+from .serializers import DoctorSerializer,AppointmentCreateSerializer
 from .services import get_free_slots
-
+from rest_framework import generics
+from accounts.permissions import IsPatient
+ 
 
 class DoctorViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = DoctorSerializer
@@ -47,3 +49,9 @@ class DoctorViewSet(viewsets.ReadOnlyModelViewSet):
             "date": raw,
             "slots": [t.strftime("%H:%M") for t in free],
         })
+
+class AppointmentCreateView(generics.CreateAPIView):
+    serializer_class = AppointmentCreateSerializer
+    permission_classes = [IsPatient]
+    def perform_create(self, serializer):
+        serializer.save(patient=self.request.user)

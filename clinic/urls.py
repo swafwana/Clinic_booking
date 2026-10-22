@@ -1,11 +1,12 @@
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
-from .views import DoctorViewSet
+from .views import AppointmentCreateView, DoctorViewSet
 
 router = DefaultRouter()
 router.register("doctors", DoctorViewSet, basename="doctor")
 
 urlpatterns = [
     path("", include(router.urls)),
+    path("appointments/", AppointmentCreateView.as_view()),
 ]
