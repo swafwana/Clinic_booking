@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>My appointments</title>
+</head>
+<body>
+  {% csrf_token %}
+  <a href="/doctors/">&larr; Back to doctors</a>
+  <h1>My appointments</h1>
+  <p id="message"></p>
+  <div id="appointments">Loading...</div>
+
+  <script>
+    const box = document.getElementById("appointments");
+    const message = document.getElementById("message");
+
+    async function cancelAppointment(id) {
+      if (!confirm("Cancel this appointment?")) return;
+
+      const csrfToken = document.querySelector("[name=csrfmiddlewaretoken]").value;
+      const response = await fetch("/api/appointments/" + id + "/cancel/", {
+        method: "POST",
+        headers: { "X-CSRFToken": csrfToken },
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        message.textContent = data.detail || "Could not cancel.";
+      } else {
+        message.textContent = "Appointment cancelled.";
+      }
+      await loadAppointments();
+    }
+
+    async function loadAppointments() {
+      const response = await fetch("/api/appointments/");
+      if (!response.ok) {
+        box.textContent = "Could not load appointments.";
+        return;
+      }
+
+      const appointments = await response.json();
+      box.textContent = "";
+
+      if (appointments.length === 0) {
+        box.textContent = "You have no appointments yet.";
+        return;
+      }
+
+      for (const appt of appointments) {
+        const card = document.createElement("div");
+
+        const title = document.createElement("h3");
+        title.textContent = appt.doctor_name;
+
+        const when = document.createElement("p");
+        when.textContent = appt.date + " at " + appt.time.slice(0, 5) + " - " + appt.status;
+
+        const reason = document.createElement("p");
+        reason.textContent = appt.reason ? "Reason: " + appt.reason : "No reason given";
+
+        card.append(title, when, reason);
+
+        if (appt.status === "booked") {
+          const startsAt = new Date(appt.date + "T" + appt.time);
+          if (startsAt > new Date()) {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.textContent = "Cancel";
+            button.addEventListener("click", () => cancelAppointment(appt.id));
+            card.append(button);
+          } else {
+            const note = document.createElement("p");
+            note.textContent = "Past appointment - waiting for the doctor to update it.";
+            card.append(note);
+          }
+        }
+
+        box.append(card);
+      }
+    }
+
+    loadAppointments();
+  </script>
+</body>
+</html>

@@ -27,3 +27,10 @@ class AppointmentCreateSerializer(serializers.ModelSerializer):
         if attrs["time"] not in get_free_slots(attrs["doctor"], attrs["date"]):
             raise serializers.ValidationError("That slot is not available.")
         return attrs
+class AppointmentSerializer(serializers.ModelSerializer):
+    doctor_name = serializers.StringRelatedField(source="doctor")
+
+    class Meta:
+        model = Appointment
+        fields = ["id", "doctor", "doctor_name", "date", "time", "reason", "status"]
+        read_only_fields = fields
