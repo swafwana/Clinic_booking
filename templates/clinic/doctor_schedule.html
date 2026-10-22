@@ -9,12 +9,18 @@
 
   <div id="message" class="toast-message"></div>
 
-  <h2><i class="fa-solid fa-clipboard-list"></i> Appointments Roster</h2>
+  <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 1.5rem; margin-bottom: 0.5rem;">
+    <h2><i class="fa-solid fa-clipboard-list"></i> Appointments Roster</h2>
+    <span style="font-size: 0.82rem; color: var(--text-muted);"><i class="fa-solid fa-circle-info"></i> Click "Date" column header to toggle ascending / descending</span>
+  </div>
+
   <div class="table-container">
     <table class="data-table">
       <thead>
         <tr>
-          <th><i class="fa-regular fa-calendar"></i> Date</th>
+          <th id="th-date-sort" style="cursor: pointer; user-select: none;" title="Click to sort by date">
+            <i class="fa-regular fa-calendar"></i> Date <span id="date-sort-icon"><i class="fa-solid fa-sort" style="margin-left: 0.35rem; color: var(--text-muted);"></i></span>
+          </th>
           <th><i class="fa-regular fa-clock"></i> Time</th>
           <th><i class="fa-regular fa-user"></i> Patient</th>
           <th><i class="fa-regular fa-comment-dots"></i> Reason</th>
@@ -28,6 +34,45 @@
     </table>
   </div>
 
+  <!-- Time-off & Leave Management -->
+  <div class="card" style="margin-top: 2rem;">
+    <h2><i class="fa-solid fa-umbrella-beach"></i> Manage Time Off & Leaves</h2>
+    <p style="margin-bottom: 1.25rem;">
+      Schedule your upcoming leaves or vacations. Free slots during these date ranges will automatically be blocked from patient bookings.
+    </p>
+
+    <form id="timeoff-form" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)) auto; gap: 0.85rem; align-items: end; background: var(--bg-subtle); padding: 1.25rem; border-radius: var(--radius-lg); border: 1px solid var(--border-light);">
+      <div class="form-group" style="margin-bottom: 0;">
+        <label for="to-start"><i class="fa-regular fa-calendar"></i> Start Date *</label>
+        <input type="date" id="to-start" class="form-input" required>
+      </div>
+
+      <div class="form-group" style="margin-bottom: 0;">
+        <label for="to-end"><i class="fa-regular fa-calendar-check"></i> End Date *</label>
+        <input type="date" id="to-end" class="form-input" required>
+      </div>
+
+      <div class="form-group" style="margin-bottom: 0;">
+        <label for="to-reason"><i class="fa-regular fa-comment"></i> Reason (optional)</label>
+        <input type="text" id="to-reason" class="form-input" placeholder="e.g. Annual leave, conference">
+      </div>
+
+      <button type="submit" id="to-submit" class="btn btn-primary" style="height: 42px;">
+        <i class="fa-solid fa-plus"></i> Add Leave
+      </button>
+    </form>
+
+    <div id="timeoff-msg" style="margin-top: 0.75rem;"></div>
+
+    <div style="margin-top: 1.5rem;">
+      <h3 style="font-size: 1rem; color: var(--text-muted); margin-bottom: 0.75rem;"><i class="fa-solid fa-list-check"></i> Your Scheduled Leaves:</h3>
+      <div id="timeoff-list">
+        <div style="color: var(--text-muted);"><i class="fa-solid fa-spinner fa-spin"></i> Loading scheduled leaves...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Free slots inspector -->
   <div class="card" style="margin-top: 2rem;">
     <h2><i class="fa-regular fa-clock"></i> Inspect Free Slots by Date</h2>
     <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem;">
@@ -47,6 +92,9 @@
     const csrfToken = document.querySelector("[name=csrfmiddlewaretoken]").value;
     const rows = document.getElementById("rows");
     const message = document.getElementById("message");
+
+    let appointmentsList = [];
+    let dateSortAsc = true;
 
     function textCell(text) {
       const td = document.createElement("td");
@@ -71,13 +119,7 @@
       return btn;
     }
 
-    async function loadAppointments() {
-      const res = await fetch("/api/doctor/appointments/");
-      if (!res.ok) {
-        message.innerHTML = `<div class="alert alert-danger"><i class="fa-solid fa-circle-exclamation"></i> Could not load appointments.</div>`;
-        return;
-      }
-      const data = await res.json();
+    function renderAppointments(data) {
       rows.replaceChildren();
 
       if (data.length === 0) {
@@ -111,6 +153,36 @@
       }
     }
 
+    function sortAndRenderAppointments() {
+      appointmentsList.sort((a, b) => {
+        const valA = (a.date || "") + " " + (a.time || "");
+        const valB = (b.date || "") + " " + (b.time || "");
+        return dateSortAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+      });
+      const icon = document.getElementById("date-sort-icon");
+      if (icon) {
+        icon.innerHTML = dateSortAsc
+          ? `<i class="fa-solid fa-arrow-up-short-wide" style="color: var(--primary); margin-left: 0.35rem;"></i>`
+          : `<i class="fa-solid fa-arrow-down-wide-short" style="color: var(--primary); margin-left: 0.35rem;"></i>`;
+      }
+      renderAppointments(appointmentsList);
+    }
+
+    async function loadAppointments() {
+      const res = await fetch("/api/doctor/appointments/");
+      if (!res.ok) {
+        message.innerHTML = `<div class="alert alert-danger"><i class="fa-solid fa-circle-exclamation"></i> Could not load appointments.</div>`;
+        return;
+      }
+      appointmentsList = await res.json();
+      sortAndRenderAppointments();
+    }
+
+    document.getElementById("th-date-sort").addEventListener("click", () => {
+      dateSortAsc = !dateSortAsc;
+      sortAndRenderAppointments();
+    });
+
     async function markAppointment(id, action) {
       const res = await fetch(
         `/api/doctor/appointments/${encodeURIComponent(id)}/${action}/`,
@@ -125,6 +197,159 @@
       loadAppointments();
     }
 
+    // --- TIME-OFF MANAGEMENT ---
+    const timeOffForm = document.getElementById("timeoff-form");
+    const toStart = document.getElementById("to-start");
+    const toEnd = document.getElementById("to-end");
+    const toReason = document.getElementById("to-reason");
+    const timeOffMsg = document.getElementById("timeoff-msg");
+    const timeOffList = document.getElementById("timeoff-list");
+
+    const todayStr = new Date().toLocaleDateString("en-CA");
+    toStart.min = todayStr;
+    toEnd.min = todayStr;
+
+    toStart.addEventListener("change", () => {
+      if (toStart.value && (!toEnd.value || toEnd.value < toStart.value)) {
+        toEnd.value = toStart.value;
+      }
+      toEnd.min = toStart.value;
+    });
+
+    async function loadTimeOff() {
+      const res = await fetch("/api/doctor/time-off/");
+      if (!res.ok) {
+        timeOffList.innerHTML = `<div style="color: #ef4444;"><i class="fa-solid fa-circle-exclamation"></i> Could not load time off records.</div>`;
+        return;
+      }
+      const data = await res.json();
+      timeOffList.replaceChildren();
+
+      if (data.length === 0) {
+        timeOffList.innerHTML = `
+          <div style="background: var(--bg-surface); border: 1px dashed var(--border-light); border-radius: var(--radius-md); padding: 1.25rem; text-align: center; color: var(--text-muted);">
+            <i class="fa-solid fa-calendar-check" style="font-size: 1.5rem; margin-bottom: 0.5rem; color: #cbd5e1;"></i>
+            <p>No leaves scheduled. You are currently available on all regular working days.</p>
+          </div>
+        `;
+        return;
+      }
+
+      const tableContainer = document.createElement("div");
+      tableContainer.className = "table-container";
+      tableContainer.style.margin = "0";
+
+      const table = document.createElement("table");
+      table.className = "data-table";
+      table.innerHTML = `
+        <thead>
+          <tr>
+            <th>From</th>
+            <th>To</th>
+            <th>Reason</th>
+            <th style="width: 100px;">Action</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      `;
+
+      const tbody = table.querySelector("tbody");
+
+      for (const item of data) {
+        const tr = document.createElement("tr");
+
+        const fromCell = document.createElement("td");
+        fromCell.innerHTML = `<strong>${item.start_date}</strong>`;
+
+        const toCell = document.createElement("td");
+        toCell.innerHTML = `<strong>${item.end_date}</strong>`;
+
+        const reasonCell = document.createElement("td");
+        reasonCell.textContent = item.reason || "Scheduled Leave";
+
+        const actionCell = document.createElement("td");
+        const delBtn = document.createElement("button");
+        delBtn.type = "button";
+        delBtn.className = "btn btn-danger-soft btn-sm";
+        delBtn.innerHTML = `<i class="fa-solid fa-trash"></i> Cancel`;
+        delBtn.addEventListener("click", () => deleteTimeOff(item.id));
+
+        actionCell.append(delBtn);
+        tr.append(fromCell, toCell, reasonCell, actionCell);
+        tbody.append(tr);
+      }
+
+      tableContainer.append(table);
+      timeOffList.append(tableContainer);
+    }
+
+    timeOffForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      timeOffMsg.innerHTML = "";
+
+      if (toStart.value > toEnd.value) {
+        timeOffMsg.innerHTML = `<div class="alert alert-danger"><i class="fa-solid fa-circle-exclamation"></i> End date cannot be before start date.</div>`;
+        return;
+      }
+
+      const submitBtn = document.getElementById("to-submit");
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Saving...`;
+
+      try {
+        const res = await fetch("/api/doctor/time-off/", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": csrfToken,
+          },
+          body: JSON.stringify({
+            start_date: toStart.value,
+            end_date: toEnd.value,
+            reason: toReason.value.trim(),
+          }),
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          const errText = data.end_date || data.start_date || data.detail || "Could not save time off.";
+          timeOffMsg.innerHTML = `<div class="alert alert-danger"><i class="fa-solid fa-circle-exclamation"></i> ${errText}</div>`;
+        } else {
+          timeOffMsg.innerHTML = `<div class="alert alert-success"><i class="fa-solid fa-circle-check"></i> Leave from ${data.start_date} to ${data.end_date} successfully scheduled.</div>`;
+          timeOffForm.reset();
+          await loadTimeOff();
+        }
+      } catch (err) {
+        timeOffMsg.innerHTML = `<div class="alert alert-danger"><i class="fa-solid fa-circle-exclamation"></i> Network error. Please try again.</div>`;
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = `<i class="fa-solid fa-plus"></i> Add Leave`;
+      }
+    });
+
+    async function deleteTimeOff(id) {
+      if (!confirm("Remove this scheduled time off? Open slots on those dates will become bookable again.")) return;
+
+      try {
+        const res = await fetch(`/api/doctor/time-off/${id}/`, {
+          method: "DELETE",
+          headers: {
+            "X-CSRFToken": csrfToken,
+          },
+        });
+
+        if (res.ok || res.status === 204) {
+          timeOffMsg.innerHTML = `<div class="alert alert-success"><i class="fa-solid fa-circle-check"></i> Time off entry removed.</div>`;
+          await loadTimeOff();
+        } else {
+          timeOffMsg.innerHTML = `<div class="alert alert-danger"><i class="fa-solid fa-circle-exclamation"></i> Could not remove time off.</div>`;
+        }
+      } catch (err) {
+        timeOffMsg.innerHTML = `<div class="alert alert-danger"><i class="fa-solid fa-circle-exclamation"></i> Network error.</div>`;
+      }
+    }
+
+    // --- FREE SLOTS INSPECTOR ---
     const slotDate = document.getElementById("slot-date");
     const slotList = document.getElementById("slots");
 
@@ -158,5 +383,6 @@
     slotDate.addEventListener("change", loadSlots);
 
     loadAppointments();
+    loadTimeOff();
   </script>
 {% endblock %}

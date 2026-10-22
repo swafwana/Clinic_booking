@@ -60,6 +60,14 @@
       <input type="date" id="f-date" class="form-input">
     </div>
 
+    <div>
+      <label for="f-sort"><i class="fa-solid fa-arrow-down-wide-short"></i> Order:</label>
+      <select id="f-sort" class="form-select">
+        <option value="asc">Date: Oldest First</option>
+        <option value="desc">Date: Newest First</option>
+      </select>
+    </div>
+
     <button id="f-clear" class="btn btn-secondary btn-sm" type="button" style="margin-top: auto;">
       <i class="fa-solid fa-rotate-left"></i> Reset Filters
     </button>
@@ -69,7 +77,9 @@
     <table class="data-table">
       <thead>
         <tr>
-          <th>Date</th>
+          <th id="th-date" style="cursor: pointer; user-select: none;" title="Click to toggle date order">
+            <i class="fa-regular fa-calendar"></i> Date <span id="dash-sort-icon"><i class="fa-solid fa-arrow-up-short-wide" style="margin-left: 0.35rem; color: var(--primary);"></i></span>
+          </th>
           <th>Time</th>
           <th>Patient</th>
           <th>Doctor</th>
@@ -93,6 +103,7 @@
     const fDoctor = document.getElementById("f-doctor");
     const fStatus = document.getElementById("f-status");
     const fDate = document.getElementById("f-date");
+    const fSort = document.getElementById("f-sort");
 
     function textCell(text) {
       const td = document.createElement("td");
@@ -184,11 +195,21 @@
       }
     }
 
+    function updateSortIcon() {
+      const icon = document.getElementById("dash-sort-icon");
+      if (icon) {
+        icon.innerHTML = fSort.value === "asc"
+          ? `<i class="fa-solid fa-arrow-up-short-wide" style="color: var(--primary); margin-left: 0.35rem;"></i>`
+          : `<i class="fa-solid fa-arrow-down-wide-short" style="color: var(--primary); margin-left: 0.35rem;"></i>`;
+      }
+    }
+
     async function loadAppointments() {
       const params = new URLSearchParams();
       if (fDoctor.value) params.set("doctor", fDoctor.value);
       if (fStatus.value) params.set("status", fStatus.value);
       if (fDate.value) params.set("date", fDate.value);
+      if (fSort.value) params.set("order", fSort.value);
 
       const res = await fetch(`/api/dashboard/appointments/?${params}`);
       if (!res.ok) {
@@ -220,13 +241,25 @@
       }
     }
 
-    for (const el of [fDoctor, fStatus, fDate]) {
-      el.addEventListener("change", loadAppointments);
+    document.getElementById("th-date").addEventListener("click", () => {
+      fSort.value = fSort.value === "asc" ? "desc" : "asc";
+      updateSortIcon();
+      loadAppointments();
+    });
+
+    for (const el of [fDoctor, fStatus, fDate, fSort]) {
+      el.addEventListener("change", () => {
+        updateSortIcon();
+        loadAppointments();
+      });
     }
+
     document.getElementById("f-clear").addEventListener("click", () => {
       fDoctor.value = "";
       fStatus.value = "";
       fDate.value = "";
+      fSort.value = "asc";
+      updateSortIcon();
       loadAppointments();
     });
 

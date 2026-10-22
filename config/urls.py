@@ -14,6 +14,7 @@ urlpatterns = [
     path("api/", include("clinic.urls")),
     path("api/auth/", include("accounts.urls")),
     path("login/", TemplateView.as_view(template_name="accounts/login.html")),
+    path("register/", TemplateView.as_view(template_name="accounts/register.html")),
     path("doctors/", TemplateView.as_view(template_name="clinic/doctors.html")),
     path("doctors/<int:doctor_id>/book/", TemplateView.as_view(template_name="clinic/book.html")),
     path("appointments/", TemplateView.as_view(template_name="clinic/my_appointments.html")),

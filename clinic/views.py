@@ -1,29 +1,25 @@
-from datetime import date
+from datetime import date, datetime
 
-from rest_framework import viewsets
+from django.shortcuts import get_object_or_404
+from django.utils import timezone
+from rest_framework import generics, status, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
-from .models import Doctor,Appointment
+from accounts.permissions import IsAdminRole, IsDoctor, IsPatient
+from .models import Appointment, Doctor, TimeOff
 from .serializers import (
-    DoctorSerializer,
+    AdminAppointmentSerializer,
     AppointmentCreateSerializer,
     AppointmentSerializer,
     DoctorAppointmentSerializer,
-    AdminAppointmentSerializer,
+    DoctorSerializer,
+    TimeOffSerializer,
 )
-from rest_framework.exceptions import ValidationError
-from .services import get_free_slots, get_dashboard_stats
-from rest_framework import generics
-from accounts.permissions import IsPatient,IsDoctor,IsAdminRole
-from django.shortcuts import get_object_or_404
-from rest_framework import generics, status
-from rest_framework.response import Response
-from rest_framework.views import APIView
-from datetime import datetime
+from .services import get_dashboard_stats, get_free_slots
 
-from django.utils import timezone
- 
 
 class DoctorViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = DoctorSerializer
@@ -64,13 +60,18 @@ class DoctorViewSet(viewsets.ReadOnlyModelViewSet):
             "slots": [t.strftime("%H:%M") for t in free],
         })
 
+
 class AppointmentListCreateView(generics.ListCreateAPIView):
     permission_classes = [IsPatient]
 
     def get_queryset(self):
-        return Appointment.objects.filter(
-            patient=self.request.user
-        ).select_related("doctor__user")
+        order = self.request.query_params.get("order", "asc")
+        ordering = ("-date", "-time") if order == "desc" else ("date", "time")
+        return (
+            Appointment.objects.filter(patient=self.request.user)
+            .select_related("doctor__user")
+            .order_by(*ordering)
+        )
 
     def get_serializer_class(self):
         if self.request.method == "POST":
@@ -79,6 +80,8 @@ class AppointmentListCreateView(generics.ListCreateAPIView):
 
     def perform_create(self, serializer):
         serializer.save(patient=self.request.user)
+
+
 class AppointmentCancelView(APIView):
     permission_classes = [IsPatient]
 
@@ -105,17 +108,21 @@ class AppointmentCancelView(APIView):
         appointment.save()
         return Response(AppointmentSerializer(appointment).data)
 
+
 class DoctorAppointmentListView(generics.ListAPIView):
     serializer_class = DoctorAppointmentSerializer
     permission_classes = [IsDoctor]
 
     def get_queryset(self):
+        order = self.request.query_params.get("order", "asc")
+        ordering = ("-date", "-time") if order == "desc" else ("date", "time")
         return (
             Appointment.objects
             .filter(doctor=self.request.user.doctor_profile)
             .select_related("patient")
-            .order_by("date", "time")
+            .order_by(*ordering)
         )
+
 
 class DoctorAppointmentStatusView(APIView):
     permission_classes = [IsDoctor]
@@ -135,6 +142,8 @@ class DoctorAppointmentStatusView(APIView):
         appointment.status = self.new_status
         appointment.save()
         return Response(DoctorAppointmentSerializer(appointment).data)
+
+
 class DoctorFreeSlotsView(APIView):
     permission_classes = [IsDoctor]
 
@@ -161,11 +170,36 @@ class DoctorFreeSlotsView(APIView):
             "slots": [t.strftime("%H:%M") for t in free],
         })
 
+
+class DoctorTimeOffListCreateView(generics.ListCreateAPIView):
+    serializer_class = TimeOffSerializer
+    permission_classes = [IsDoctor]
+
+    def get_queryset(self):
+        return TimeOff.objects.filter(
+            doctor=self.request.user.doctor_profile
+        ).order_by("-start_date")
+
+    def perform_create(self, serializer):
+        serializer.save(doctor=self.request.user.doctor_profile)
+
+
+class DoctorTimeOffDeleteView(generics.DestroyAPIView):
+    serializer_class = TimeOffSerializer
+    permission_classes = [IsDoctor]
+
+    def get_queryset(self):
+        return TimeOff.objects.filter(
+            doctor=self.request.user.doctor_profile
+        )
+
+
 class AdminStatsView(APIView):
     permission_classes = [IsAdminRole]
 
     def get(self, request):
         return Response(get_dashboard_stats())
+
 
 class AdminAppointmentListView(generics.ListAPIView):
     serializer_class = AdminAppointmentSerializer
@@ -194,4 +228,6 @@ class AdminAppointmentListView(generics.ListAPIView):
             except ValueError:
                 raise ValidationError({"date": "Invalid date. Use YYYY-MM-DD."})
 
-        return qs.order_by("date", "time")
+        order = params.get("order", "asc")
+        ordering = ("-date", "-time") if order == "desc" else ("date", "time")
+        return qs.order_by(*ordering)

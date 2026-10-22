@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+{% block title %}Patient Registration{% endblock %}
+
+{% block content %}
+<div class="auth-wrapper">
+  <div class="auth-card" style="max-width: 480px;">
+    <div class="auth-header">
+      <div class="auth-icon">
+        <i class="fa-solid fa-user-plus"></i>
+      </div>
+      <h1>Create an Account</h1>
+      <p class="auth-subtitle">Register as a patient to schedule and manage clinic appointments</p>
+    </div>
+
+    <form id="register-form" class="auth-form">
+      {% csrf_token %}
+      <div class="form-group">
+        <label for="username"><i class="fa-regular fa-user"></i> Username *</label>
+        <input type="text" id="username" placeholder="Choose a username" required autofocus autocomplete="username">
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+        <div class="form-group">
+          <label for="first_name"><i class="fa-regular fa-id-badge"></i> First Name</label>
+          <input type="text" id="first_name" placeholder="First name" autocomplete="given-name">
+        </div>
+        <div class="form-group">
+          <label for="last_name">Last Name</label>
+          <input type="text" id="last_name" placeholder="Last name" autocomplete="family-name">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="email"><i class="fa-regular fa-envelope"></i> Email Address</label>
+        <input type="email" id="email" placeholder="name@example.com" autocomplete="email">
+      </div>
+
+      <div class="form-group">
+        <label for="password"><i class="fa-solid fa-lock"></i> Password *</label>
+        <input type="password" id="password" placeholder="Create a strong password" required autocomplete="new-password">
+      </div>
+
+      <div class="form-group">
+        <label for="password_confirm"><i class="fa-solid fa-shield-halved"></i> Confirm Password *</label>
+        <input type="password" id="password_confirm" placeholder="Confirm your password" required autocomplete="new-password">
+      </div>
+
+      <button type="submit" id="submit-btn" class="btn btn-primary btn-block">
+        <i class="fa-solid fa-user-check"></i> Register Account
+      </button>
+
+      <div id="error" class="auth-error"></div>
+    </form>
+
+    <div style="text-align: center; margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px solid var(--border-light); font-size: 0.92rem;">
+      <span style="color: var(--text-muted);">Already have an account?</span>
+      <a href="/login/" style="font-weight: 700; margin-left: 0.35rem;">Sign in here &rarr;</a>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+  <script>
+    const form = document.getElementById("register-form");
+    const errorEl = document.getElementById("error");
+    const submitBtn = document.getElementById("submit-btn");
+
+    function formatError(data) {
+      if (typeof data === "string") return data;
+      if (data.detail) return data.detail;
+      let messages = [];
+      for (const [key, val] of Object.entries(data)) {
+        const fieldName = key === "non_field_errors" ? "" : `<strong>${key}:</strong> `;
+        const fieldText = Array.isArray(val) ? val.join(" ") : val;
+        messages.push(`${fieldName}${fieldText}`);
+      }
+      return messages.join("<br>") || "Registration failed. Please check the form.";
+    }
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      errorEl.style.display = "none";
+      errorEl.innerHTML = "";
+
+      const username = document.getElementById("username").value.trim();
+      const firstName = document.getElementById("first_name").value.trim();
+      const lastName = document.getElementById("last_name").value.trim();
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value;
+      const passwordConfirm = document.getElementById("password_confirm").value;
+
+      if (password !== passwordConfirm) {
+        errorEl.innerHTML = `<i class="fa-solid fa-circle-exclamation"></i> Passwords do not match.`;
+        errorEl.style.display = "block";
+        return;
+      }
+
+      const csrfToken = form.querySelector("[name=csrfmiddlewaretoken]").value;
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Creating account...`;
+
+      try {
+        const response = await fetch("/api/auth/register/", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": csrfToken,
+          },
+          body: JSON.stringify({
+            username: username,
+            first_name: firstName,
+            last_name: lastName,
+            email: email,
+            password: password,
+          }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          errorEl.innerHTML = `<i class="fa-solid fa-circle-exclamation"></i> ${formatError(data)}`;
+          errorEl.style.display = "block";
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = `<i class="fa-solid fa-user-check"></i> Register Account`;
+          return;
+        }
+
+        // Successfully registered! Redirect to login with success flag
+        window.location.href = "/login/?registered=1";
+      } catch (err) {
+        errorEl.innerHTML = `<i class="fa-solid fa-circle-exclamation"></i> Network error. Please try again.`;
+        errorEl.style.display = "block";
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = `<i class="fa-solid fa-user-check"></i> Register Account`;
+      }
+    });
+  </script>
+{% endblock %}

@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import Appointment, Doctor
+from .models import Appointment, Doctor, TimeOff
 from .services import get_free_slots
 
 
@@ -51,6 +51,7 @@ class DoctorAppointmentSerializer(serializers.ModelSerializer):
     def get_patient_name(self, obj):
         return obj.patient.get_full_name() or obj.patient.username
 
+
 class AdminAppointmentSerializer(serializers.ModelSerializer):
     patient_name = serializers.SerializerMethodField()
     doctor_name = serializers.SerializerMethodField()
@@ -65,3 +66,17 @@ class AdminAppointmentSerializer(serializers.ModelSerializer):
 
     def get_doctor_name(self, obj):
         return f"Dr. {obj.doctor.user.get_full_name() or obj.doctor.user.username}"
+
+
+class TimeOffSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TimeOff
+        fields = ["id", "start_date", "end_date", "reason"]
+        read_only_fields = ["id"]
+
+    def validate(self, attrs):
+        start = attrs.get("start_date")
+        end = attrs.get("end_date")
+        if start and end and start > end:
+            raise serializers.ValidationError({"end_date": "End date cannot be earlier than start date."})
+        return attrs

@@ -9,6 +9,16 @@
 
   <div id="message" class="toast-message"></div>
 
+  <div style="display: flex; justify-content: flex-end; align-items: center; margin-top: 1rem; margin-bottom: 0.5rem; gap: 0.5rem;">
+    <label for="appt-sort" style="margin-bottom:0; font-size:0.88rem; color:var(--text-muted);">
+      <i class="fa-solid fa-arrow-down-wide-short"></i> Sort:
+    </label>
+    <select id="appt-sort" class="form-select" style="padding: 0.35rem 0.75rem; font-size: 0.88rem; width: auto;">
+      <option value="asc">Date: Oldest First</option>
+      <option value="desc">Date: Newest First</option>
+    </select>
+  </div>
+
   <div id="appointments" class="appointments-grid">
     <div class="empty-state"><i class="fa-solid fa-spinner fa-spin empty-state-icon"></i><p>Loading your appointments...</p></div>
   </div>
@@ -18,6 +28,9 @@
   <script>
     const box = document.getElementById("appointments");
     const message = document.getElementById("message");
+    const apptSort = document.getElementById("appt-sort");
+
+    let appointmentsList = [];
 
     async function cancelAppointment(id) {
       if (!confirm("Are you sure you want to cancel this appointment?")) return;
@@ -37,14 +50,7 @@
       await loadAppointments();
     }
 
-    async function loadAppointments() {
-      const response = await fetch("/api/appointments/");
-      if (!response.ok) {
-        box.innerHTML = `<div class="empty-state"><i class="fa-solid fa-triangle-exclamation empty-state-icon"></i><p>Could not load appointments.</p></div>`;
-        return;
-      }
-
-      const appointments = await response.json();
+    function renderAppointments(appointments) {
       box.innerHTML = "";
 
       if (appointments.length === 0) {
@@ -122,6 +128,29 @@
         box.append(card);
       }
     }
+
+    function sortAndRender() {
+      const isAsc = apptSort.value === "asc";
+      appointmentsList.sort((a, b) => {
+        const valA = (a.date || "") + " " + (a.time || "");
+        const valB = (b.date || "") + " " + (b.time || "");
+        return isAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+      });
+      renderAppointments(appointmentsList);
+    }
+
+    async function loadAppointments() {
+      const response = await fetch(`/api/appointments/?order=${apptSort.value}`);
+      if (!response.ok) {
+        box.innerHTML = `<div class="empty-state"><i class="fa-solid fa-triangle-exclamation empty-state-icon"></i><p>Could not load appointments.</p></div>`;
+        return;
+      }
+
+      appointmentsList = await response.json();
+      sortAndRender();
+    }
+
+    apptSort.addEventListener("change", sortAndRender);
 
     loadAppointments();
   </script>

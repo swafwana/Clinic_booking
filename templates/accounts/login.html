@@ -12,6 +12,11 @@
       <p class="auth-subtitle">Welcome back! Sign in to access your dashboard</p>
     </div>
 
+    <div id="success-banner" class="alert alert-success" style="display: none; margin-bottom: 1.25rem;">
+      <i class="fa-solid fa-circle-check"></i>
+      <span>Account created successfully! Please log in below.</span>
+    </div>
+
     <form id="login-form" class="auth-form">
       {% csrf_token %}
       <div class="form-group">
@@ -31,6 +36,11 @@
       <p id="error" class="auth-error"></p>
     </form>
 
+    <div style="text-align: center; margin-top: 1.25rem; font-size: 0.92rem;">
+      <span style="color: var(--text-muted);">New patient?</span>
+      <a href="/register/" style="font-weight: 700; color: var(--primary); margin-left: 0.35rem;">Create an account &rarr;</a>
+    </div>
+
     <div class="demo-accounts">
       <div class="demo-title">
         <i class="fa-solid fa-circle-info"></i> Quick Demo Logins
@@ -47,6 +57,12 @@
 
 {% block scripts %}
   <script>
+    // Check if redirected from registration
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get("registered") === "1") {
+      document.getElementById("success-banner").style.display = "flex";
+    }
+
     function fillDemo(username) {
       document.getElementById("username").value = username;
       document.getElementById("password").focus();
