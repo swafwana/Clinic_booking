@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Doctors</title>
+</head>
+<body>
+  <h1>Our Doctors</h1>
+
+  <label for="specialty-filter">Specialty:</label>
+  <select id="specialty-filter">
+    <option value="">All specialties</option>
+  </select>
+
+  <div id="doctor-list">Loading...</div>
+
+  <script>
+    const filter = document.getElementById("specialty-filter");
+    const list = document.getElementById("doctor-list");
+
+    async function loadSpecialties() {
+      const response = await fetch("/api/doctors/specialties/");
+      if (!response.ok) return;
+
+      const specialties = await response.json();
+      for (const specialty of specialties) {
+        const option = document.createElement("option");
+        option.value = specialty;
+        option.textContent = specialty;
+        filter.append(option);
+      }
+    }
+
+    async function loadDoctors() {
+      let url = "/api/doctors/";
+      if (filter.value) {
+        url += "?specialty=" + encodeURIComponent(filter.value);
+      }
+
+      const response = await fetch(url);
+      if (!response.ok) {
+        list.textContent = "Could not load doctors.";
+        return;
+      }
+
+      const doctors = await response.json();
+      list.textContent = "";
+
+      if (doctors.length === 0) {
+        list.textContent = "No doctors found.";
+        return;
+      }
+
+      for (const doctor of doctors) {
+        const card = document.createElement("div");
+
+        const name = document.createElement("h3");
+        name.textContent = doctor.name;
+
+        const info = document.createElement("p");
+        info.textContent = doctor.specialty + " - " + doctor.bio;
+
+        card.append(name, info);
+        list.append(card);
+      }
+    }
+
+    filter.addEventListener("change", loadDoctors);
+
+    loadSpecialties();
+    loadDoctors();
+  </script>
+</body>
+</html>
