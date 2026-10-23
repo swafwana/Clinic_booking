@@ -1,72 +1,79 @@
 {% extends "base.html" %}
-{% block title %}Log in{% endblock %}
+{% block title %}Sign In{% endblock %}
 
 {% block content %}
-<div class="auth-wrapper">
-  <div class="auth-card">
-    <div class="auth-header">
-      <div class="auth-icon">
-        <i class="fa-solid fa-hospital-user"></i>
-      </div>
-      <h1>Clinic Login</h1>
-      <p class="auth-subtitle">Welcome back! Sign in to access your dashboard</p>
-    </div>
+<div class="hero-split-container">
+  <!-- Left Column: Hero Copy & Value Prop (matching screenshot) -->
+    <div class="hero-left">
+    <h1 class="hero-headline">Welcome back to Clinic Bookings</h1>
+    <p class="hero-subtext">
+      Sign in to manage your appointments. Patients can book and cancel visits, doctors can see their daily schedule, and administrators can track the whole clinic.
+    </p>
 
-    <div id="success-banner" class="alert alert-success" style="display: none; margin-bottom: 1.25rem;">
-      <i class="fa-solid fa-circle-check"></i>
-      <span>Account created successfully! Please log in below.</span>
-    </div>
-
-    <form id="login-form" class="auth-form">
-      {% csrf_token %}
-      <div class="form-group">
-        <label for="username"><i class="fa-regular fa-user"></i> Username</label>
-        <input type="text" id="username" placeholder="Enter username" required autofocus autocomplete="username">
+    <div class="hero-features">
+      <div class="hero-feature-item">
+        <i class="fa-solid fa-circle-check"></i>
+        <span>Patients: book a visit with the right specialist in a few clicks</span>
       </div>
+      <div class="hero-feature-item">
+        <i class="fa-solid fa-circle-check"></i>
+        <span>Doctors: view your appointments and manage your time off</span>
+      </div>
+      <div class="hero-feature-item">
+        <i class="fa-solid fa-circle-check"></i>
+        <span>Admins: monitor bookings and doctor workload in one place</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right Column: Sign In Card (Zoho Form Card style) -->
+  <div class="hero-right">
+    <div class="hero-form-card">
+      <h2 class="card-title" style="margin-top: 0; margin-bottom: 1.25rem;">Sign In to Clinic Bookings</h2>
+
+      <div id="success-banner" class="alert alert-success" style="display: none; margin-bottom: 1.25rem;">
+        <i class="fa-solid fa-circle-check"></i>
+        <span>Account created successfully! Please sign in below.</span>
+      </div>
+
+      <form id="login-form">
+        {% csrf_token %}
+        <div class="form-group">
+          <label for="username">Username *</label>
+          <input type="text" id="username" placeholder="Enter your username" required autofocus autocomplete="username">
+        </div>
+        
+        <div class="form-group">
+          <label for="password">Password *</label>
+          <input type="password" id="password" placeholder="Enter your password" required autocomplete="current-password">
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block" style="margin-top: 0.5rem;">
+          Sign In Now &rarr;
+        </button>
+
+        <p id="error" class="alert alert-danger" style="display: none; margin-top: 1rem;"></p>
+      </form>
+
+      <div style="text-align: center; margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px solid var(--border-light); font-size: 0.92rem;">
+        <span style="color: var(--text-muted);">New to Clinic Bookings?</span>
+        <a href="/register/" style="font-weight: 700; color: var(--brand-blue); margin-left: 0.35rem;">Create a patient account&rarr;</a>
+      </div>
+
       
-      <div class="form-group">
-        <label for="password"><i class="fa-solid fa-lock"></i> Password</label>
-        <input type="password" id="password" placeholder="Enter password" required autocomplete="current-password">
-      </div>
-
-      <button type="submit" class="btn btn-primary btn-block">
-        <i class="fa-solid fa-arrow-right-to-bracket"></i> Log in
-      </button>
-
-      <p id="error" class="auth-error"></p>
-    </form>
-
-    <div style="text-align: center; margin-top: 1.25rem; font-size: 0.92rem;">
-      <span style="color: var(--text-muted);">New patient?</span>
-      <a href="/register/" style="font-weight: 700; color: var(--primary); margin-left: 0.35rem;">Create an account &rarr;</a>
     </div>
-
-    <!-- <div class="demo-accounts">
-      <div class="demo-title">
-        <i class="fa-solid fa-circle-info"></i> Quick Demo Logins
-      </div>
-      <div class="demo-chips">
-        <span class="demo-chip" onclick="fillDemo('rahul')"><i class="fa-solid fa-user"></i> Patient: rahul</span>
-        <span class="demo-chip" onclick="fillDemo('dr_sharma')"><i class="fa-solid fa-user-doctor"></i> Doctor: dr_sharma</span>
-        <span class="demo-chip" onclick="fillDemo('admin')"><i class="fa-solid fa-shield-halved"></i> Admin: admin</span>
-      </div>
-    </div> -->
   </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
   <script>
-    // Check if redirected from registration
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get("registered") === "1") {
       document.getElementById("success-banner").style.display = "flex";
     }
 
-    function fillDemo(username) {
-      document.getElementById("username").value = username;
-      document.getElementById("password").focus();
-    }
+    
 
     const form = document.getElementById("login-form");
     const errorEl = document.getElementById("error");

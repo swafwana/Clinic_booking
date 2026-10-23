@@ -4,11 +4,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}Clinic{% endblock %} &middot; Clinic Booking</title>
-  <!-- Google Fonts: Plus Jakarta Sans -->
+  <title>{% block title %}Clinic Bookings{% endblock %} &middot; Doctor Appointment Scheduling</title>
+  <!-- Google Fonts: Outfit (Headings) + Plus Jakarta Sans & Inter (Body) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <!-- Font Awesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <!-- Stylesheet -->
@@ -17,22 +17,26 @@
 </head>
 <body>
   {% csrf_token %}
+
+  <!-- Top Announcement Banner (Zoho style) -->
+  
+
   <header class="app-header">
     <nav class="navbar">
       <a href="{% if user.is_authenticated %}{% if user.role == 'doctor' %}/doctor/schedule/{% elif user.role == 'admin' %}/dashboard/{% else %}/doctors/{% endif %}{% else %}/login/{% endif %}" class="brand">
-        <span class="brand-icon"><i class="fa-solid fa-heart-pulse"></i></span>
-        <span>Clinic <span class="brand-subtitle">Booking</span></span>
+        <span class="brand-icon"><i class="fa-solid fa-calendar-check"></i></span>
+        <span class="brand-name">Clinic<strong>Bookings</strong></span>
       </a>
 
       {% if user.is_authenticated %}
         <div class="nav-links">
           {% if user.role == "patient" %}
-            <a href="/doctors/" class="nav-link"><i class="fa-solid fa-user-doctor"></i> Doctors</a>
-            <a href="/appointments/" class="nav-link"><i class="fa-solid fa-calendar-check"></i> My Appointments</a>
+            <a href="/doctors/" class="nav-link {% if request.path == '/doctors/' %}active{% endif %}"><i class="fa-solid fa-user-doctor"></i> Doctors</a>
+            <a href="/appointments/" class="nav-link {% if request.path == '/appointments/' %}active{% endif %}"><i class="fa-solid fa-calendar-check"></i> My Appointments</a>
           {% elif user.role == "doctor" %}
-            <a href="/doctor/schedule/" class="nav-link"><i class="fa-solid fa-calendar-days"></i> My Schedule</a>
+            <a href="/doctor/schedule/" class="nav-link {% if request.path == '/doctor/schedule/' %}active{% endif %}"><i class="fa-solid fa-calendar-days"></i> My Schedule</a>
           {% elif user.role == "admin" %}
-            <a href="/dashboard/" class="nav-link"><i class="fa-solid fa-chart-line"></i> Dashboard</a>
+            <a href="/dashboard/" class="nav-link {% if request.path == '/dashboard/' %}active{% endif %}"><i class="fa-solid fa-chart-line"></i> Dashboard</a>
           {% endif %}
         </div>
 
@@ -49,7 +53,9 @@
         </div>
       {% else %}
         <div class="nav-links">
-          <a href="/login/" class="nav-link"><i class="fa-solid fa-right-to-bracket"></i> Log in</a>
+        
+          <a href="/register/" class="nav-link">Patient Sign Up</a>
+          <a href="/login/" class="nav-signin-btn"><i class="fa-solid fa-arrow-right-to-bracket"></i> Sign In</a>
         </div>
       {% endif %}
     </nav>
@@ -59,9 +65,10 @@
     {% block content %}{% endblock %}
   </main>
 
+  
   <footer class="app-footer">
     <div class="footer-inner">
-      <p>&copy; 2026 Clinic Booking Portal. Providing healthcare appointment scheduling.</p>
+      <p>&copy; 2026 Clinic Bookings &middot; Doctor appointment booking software for better patient care.</p>
     </div>
   </footer>
 
