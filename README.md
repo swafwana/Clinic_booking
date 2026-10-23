@@ -1,171 +1,235 @@
-# 🏥 MedCare Clinic Booking System
+# Clinic Bookings
 
-A full-stack clinic and appointment scheduling platform built with **Django 5** and **Django REST Framework (DRF)**. It provides a secure, role-based workflow for **Patients**, **Doctors**, and **Clinic Administrators** with a modern, responsive healthcare UI.
+A role-based clinic appointment system built with Django 5 and Django REST Framework. Patients book visits with doctors, doctors manage their schedule and time off, and administrators monitor the clinic and create doctor accounts.
 
----
-
-## ✨ Features
-
-### 👤 Patient Portal
-* **Self-Service Registration & Login:** Create a patient account with secure password validation and session authentication.
-* **Specialist Directory:** Browse active doctors, view medical specialties, and read practitioner bios.
-* **Dynamic Slot Booking:** Real-time calculation of available consultation slots based on doctor working hours, slot duration, and scheduled leaves.
-* **Appointment Management:** Track upcoming and historical visits, review consultation notes, and cancel appointments with immediate slot release.
-
-### 🩺 Doctor Portal
-* **Daily Schedule & Roster:** View all booked patient consultations with patient details and visit reasons.
-* **Appointment Actions:** Mark visits as **Completed** or **No-Show** directly from the schedule.
-* **Self-Service Time-Off & Leaves:** Schedule vacations, conferences, or personal leaves. Days marked as time off automatically block appointment slots from patient bookings.
-* **Free Slots Inspector:** Check open consultation slots on any calendar date.
-
-### ⚡ Administrator Dashboard
-* **Performance Overview (KPIs):** Real-time analytics displaying total visits, appointments today, and status breakdowns (Booked, Completed, Cancelled, No-Show).
-* **Doctor Workload Metrics:** Table displaying total consultations and currently active bookings per practitioner.
-* **Master Appointment Registry:** Full database registry with filtering by Doctor, Status, Date, and Sort Order (Ascending / Descending).
+Live demo: https://clinic-booking-4y1s.onrender.com (free tier, so the first load can take up to a minute).
 
 ---
 
-## 🛠️ Tech Stack
+## Features
 
-* **Backend:** Python 3.11+, Django 5.2, Django REST Framework (DRF)
-* **Database:** PostgreSQL (with `psycopg3` driver)
-* **Static Assets & Server:** WhiteNoise, Gunicorn
-* **Frontend:** Django Templates, Vanilla JavaScript (ES6+ Fetch API)
-* **Design & Styling:** Custom CSS3 Healthcare Design System, Google Fonts (*Plus Jakarta Sans*), Font Awesome 6 Icons
+### Patients
+- Register a patient account and sign in (session authentication).
+- Browse active doctors, optionally filtered by specialty, and read their short bios.
+- See open time slots for a doctor on a chosen date and book one.
+- View appointment history (oldest or newest first) and cancel upcoming booked appointments.
+
+### Doctors
+- View their own appointments (oldest or newest first).
+- Mark a booked appointment as **Completed** or **No-show**.
+- Add and remove time off. Days covered by time off have no bookable slots.
+- Check their own free slots for any date.
+
+### Administrators
+- Dashboard with total appointments, today's appointments and a count per status (booked, completed, cancelled, no-show).
+- Doctor workload table (total and currently booked appointments per doctor).
+- Master appointment registry filterable by doctor, status and date, with sort order.
+- **Add Doctor** form on the dashboard. Doctors cannot register themselves; only an admin can create them.
+
+### How slots work
+Free slots are generated from the doctor's weekly `Availability` windows and `slot_minutes`. A slot is removed if it is already booked, falls on a time-off day, is in the past, or has already passed today. A database constraint also prevents two booked appointments for the same doctor, date and time.
 
 ---
 
-## 📁 Project Structure
+## Tech stack
+
+- Python, Django 5.2, Django REST Framework 3.18
+- PostgreSQL via `psycopg` 3
+- `dj-database-url` for the production database URL
+- WhiteNoise for static files, Gunicorn as the server
+- Django templates with vanilla JavaScript (`fetch`) calling the API
+- Custom CSS, Google Fonts (Outfit, Plus Jakarta Sans, Inter) and Font Awesome 6
+
+Time zone is `Asia/Kolkata`.
+
+---
+
+## Project structure
 
 ```text
 Clinic_booking/
-├── accounts/               # User authentication, custom User model, roles & permissions
-│   ├── models.py           # Custom User with Role enum (Patient, Doctor, Admin)
-│   ├── permissions.py      # IsPatient, IsDoctor, IsAdminRole DRF permissions
-│   ├── serializers.py      # RegisterSerializer, LoginSerializer, UserSerializer
-│   └── views.py            # Login, Logout, and Register API views
-├── clinic/                 # Clinic management & scheduling logic
-│   ├── models.py           # Doctor, Availability, TimeOff, Appointment models
-│   ├── serializers.py      # Doctor, Appointment, TimeOff serializers
-│   ├── services.py         # Slot generation engine (get_free_slots) & dashboard stats
-│   └── views.py            # API views for booking, cancellations, leaves, dashboard
-├── config/                 # Project settings & root URL configurations
-├── static/
-│   └── css/
-│       └── style.css       # Complete modern healthcare UI stylesheet & design tokens
-├── templates/              # HTML Templates
-│   ├── base.html           # Master layout with navigation header & footer
-│   ├── accounts/           # Login and Registration pages
-│   └── clinic/             # Doctors list, booking, schedule, dashboard, appointments
+├── accounts/                 # Custom User model, auth API, role permissions
+│   ├── models.py             # User with role (patient / doctor / admin) and phone
+│   ├── permissions.py        # IsPatient, IsDoctor, IsAdminRole
+│   ├── serializers.py        # Register, Login, User serializers
+│   ├── views.py              # Register, Login, Logout views
+│   └── urls.py
+├── clinic/
+│   ├── models.py             # Doctor, Availability, TimeOff, Appointment
+│   ├── serializers.py        # Includes DoctorCreateSerializer (admin only)
+│   ├── services.py           # get_free_slots() and get_dashboard_stats()
+│   ├── views.py
+│   ├── urls.py
+│   └── management/commands/  # Demo data seed command
+├── config/                   # Settings, root URLs, WSGI
+├── static/css/style.css
+├── templates/
+│   ├── base.html             # Layout, navigation, logout
+│   ├── accounts/             # login.html, register.html
+│   └── clinic/               # doctors, book, my_appointments,
+│                             # doctor_schedule, dashboard
 ├── manage.py
 └── requirements.txt
 ```
 
 ---
 
-## 🚀 Getting Started
+## Run locally
 
-### 1. Prerequisites
-* **Python 3.11+** installed
-* **PostgreSQL** running locally or in the cloud (Neon, Supabase, Railway, etc.)
+### 1. Set up
 
-### 2. Clone and Setup Environment
-
-```powershell
-# Clone the repository
-git clone https://github.com/your-username/Clinic_booking.git
+```bash
+git clone https://github.com/swafwana/Clinic_booking.git
 cd Clinic_booking
-
-# Create and activate virtual environment
 python -m venv venv
-.\venv\Scripts\activate   # On Windows (PowerShell)
-# source venv/bin/activate # On macOS/Linux
-
-# Install dependencies
+venv\Scripts\activate          # Windows (cmd)
+# source venv/bin/activate     # macOS / Linux
 pip install -r requirements.txt
 ```
 
-### 3. Configure Environment Variables
+### 2. Environment variables
 
-Create a `.env` file in the project root:
+Create a `.env` file in the project root (never commit it):
 
 ```env
-SECRET_KEY=your-django-secret-key-here
+SECRET_KEY=change-me
 DEBUG=True
 DB_NAME=clinic_db
 DB_USER=postgres
-DB_PASSWORD=your_postgres_password
+DB_PASSWORD=your_password
 DB_HOST=localhost
 DB_PORT=5432
 ```
 
-### 4. Database Migrations
+If `DATABASE_URL` is set, the app uses it instead of the `DB_*` values. Make sure it is **not** set when you want to use your local database.
 
-```powershell
+### 3. Database and admin
+
+```bash
 python manage.py migrate
-```
-
-### 5. Create an Administrator Account
-
-```powershell
 python manage.py createsuperuser
 ```
-*(Make sure to set the `role` to `admin` in the database or shell for admin dashboard access).*
 
-### 6. Run the Development Server
+`createsuperuser` does not set the app's `role` field, and the admin dashboard and its API require `role = admin`. Either change the role in Django admin (`/admin/`), or run the seed command below, which sets every superuser's role to admin.
 
-```powershell
+### 4. Optional demo data
+
+```bash
+python manage.py seed_demo
+```
+
+This creates four doctors, three patients, working hours, a time-off entry and sample appointments in every status. All demo users share the password `demo1234`:
+
+- Doctors: `dr_nair`, `dr_sharma`, `dr_iyer`, `dr_verma`
+- Patients: `sara`, `rahul`, `priya`
+
+The command is safe to rerun. Use demo data for development only, and delete or change those accounts before real use.
+
+### 5. Start the server
+
+```bash
 python manage.py runserver
 ```
 
-Open **`http://127.0.0.1:8000/`** in your browser.
+Open http://127.0.0.1:8000/ (it redirects to the login page).
 
 ---
 
-## 🔌 API Endpoints Reference
+## Pages
 
-### Authentication (`/api/auth/`)
-| Method | Endpoint | Description | Access |
-|---|---|---|---|
-| `POST` | `/api/auth/register/` | Register a new patient account | Public |
-| `POST` | `/api/auth/login/` | Sign in (creates session cookie) | Public |
-| `POST` | `/api/auth/logout/` | Sign out (destroys session) | Authenticated |
+| URL | Who | Purpose |
+|---|---|---|
+| `/login/`, `/register/` | Public | Sign in, patient sign up |
+| `/doctors/` | Patient | Browse doctors |
+| `/doctors/<id>/book/` | Patient | Pick a date and slot |
+| `/appointments/` | Patient | Own appointments |
+| `/doctor/schedule/` | Doctor | Schedule and time off |
+| `/dashboard/` | Admin | Metrics, registry, Add Doctor |
+| `/admin/` | Superuser | Django admin |
 
-### Patient Endpoints
-| Method | Endpoint | Description | Access |
-|---|---|---|---|
-| `GET` | `/api/doctors/` | List all active doctors (optional `?specialty=`) | Authenticated |
-| `GET` | `/api/doctors/<id>/slots/?date=YYYY-MM-DD` | Get available time slots for a doctor on a date | Authenticated |
-| `GET` | `/api/appointments/` | List current patient's appointments (`?order=asc/desc`) | Patient |
-| `POST` | `/api/appointments/` | Book a consultation slot | Patient |
-| `POST` | `/api/appointments/<id>/cancel/` | Cancel an upcoming booking | Patient |
-
-### Doctor Endpoints (`/api/doctor/`)
-| Method | Endpoint | Description | Access |
-|---|---|---|---|
-| `GET` | `/api/doctor/appointments/` | View patient schedule (`?order=asc/desc`) | Doctor |
-| `POST` | `/api/doctor/appointments/<id>/complete/` | Mark visit as Completed | Doctor |
-| `POST` | `/api/doctor/appointments/<id>/no-show/` | Mark visit as No-Show | Doctor |
-| `GET` | `/api/doctor/slots/?date=YYYY-MM-DD` | Inspect open slots on a specific date | Doctor |
-| `GET` | `/api/doctor/time-off/` | List doctor's scheduled leaves | Doctor |
-| `POST` | `/api/doctor/time-off/` | Submit a new leave / time-off | Doctor |
-| `DELETE`| `/api/doctor/time-off/<id>/` | Cancel / remove a scheduled leave | Doctor |
-
-### Admin Endpoints (`/api/dashboard/`)
-| Method | Endpoint | Description | Access |
-|---|---|---|---|
-| `GET` | `/api/dashboard/stats/` | Overview counts and per-doctor workload | Admin |
-| `GET` | `/api/dashboard/appointments/` | Filter appointments (`?doctor=&status=&date=&order=`) | Admin |
+The templates are served as plain pages; access is enforced by the API permissions, so a user of the wrong role sees an empty or failed page rather than data.
 
 ---
 
-## 🔒 Security Highlights
+## API reference
 
-* **Role-Based Access Control (RBAC):** Permissions are verified on every DRF view (`IsPatient`, `IsDoctor`, `IsAdminRole`).
-* **Database Unique Constraints:** Uses PostgreSQL conditional unique constraints (`condition=Q(status="booked")`) preventing double-booking race conditions at the database level.
-* **Safe Mass Assignment:** Public registration endpoint strictly hardcodes the `patient` role, eliminating privilege escalation risks.
-* **IDOR Prevention:** Doctors and Patients can only access, modify, or delete their own appointments and leave requests.
+All endpoints use session authentication and are authenticated by default. POST, PUT and DELETE requests need the `X-CSRFToken` header.
+
+### Auth (`/api/auth/`)
+
+| Method | Endpoint | Description | Access |
+|---|---|---|---|
+| POST | `/api/auth/register/` | Register a patient | Public |
+| POST | `/api/auth/login/` | Sign in, returns the user and role | Public |
+| POST | `/api/auth/logout/` | Sign out | Authenticated |
+
+### Doctors and patients
+
+| Method | Endpoint | Description | Access |
+|---|---|---|---|
+| GET | `/api/doctors/` | Active doctors (`?specialty=`) | Authenticated |
+| GET | `/api/doctors/specialties/` | List of specialties | Authenticated |
+| GET | `/api/doctors/<id>/slots/?date=YYYY-MM-DD` | Free slots for a date | Authenticated |
+| GET | `/api/appointments/` | Own appointments (`?order=asc\|desc`) | Patient |
+| POST | `/api/appointments/` | Book a slot (`doctor`, `date`, `time`, `reason`) | Patient |
+| POST | `/api/appointments/<id>/cancel/` | Cancel an upcoming booked appointment | Patient |
+
+### Doctor (`/api/doctor/`)
+
+| Method | Endpoint | Description | Access |
+|---|---|---|---|
+| GET | `/api/doctor/appointments/` | Own appointments (`?order=`) | Doctor |
+| POST | `/api/doctor/appointments/<id>/complete/` | Mark completed | Doctor |
+| POST | `/api/doctor/appointments/<id>/no-show/` | Mark no-show | Doctor |
+| GET | `/api/doctor/slots/?date=YYYY-MM-DD` | Own free slots | Doctor |
+| GET | `/api/doctor/time-off/` | List time off | Doctor |
+| POST | `/api/doctor/time-off/` | Add time off | Doctor |
+| DELETE | `/api/doctor/time-off/<id>/` | Remove time off | Doctor |
+
+### Admin (`/api/dashboard/`)
+
+| Method | Endpoint | Description | Access |
+|---|---|---|---|
+| GET | `/api/dashboard/stats/` | Totals, status counts, per-doctor workload | Admin |
+| GET | `/api/dashboard/appointments/` | Registry (`?doctor=&status=&date=&order=`) | Admin |
+| POST | `/api/dashboard/doctors/` | Create a doctor account and profile | Admin |
+
+Creating a doctor takes `username`, `first_name`, `password`, `specialty`, and optionally `last_name`, `email`, `bio` and `slot_minutes` (5 to 120, default 30). The server sets the role to doctor, validates the password with Django's validators, and adds default working hours of Monday to Friday, 09:00 to 17:00. Hours can be changed under **Availability** in Django admin.
 
 ---
 
+## Deploy on Render
 
+1. Create a **PostgreSQL** instance and a **Web Service** from this repository, both in the same region.
+2. Build command:
+   ```
+   pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate
+   ```
+3. Start command:
+   ```
+   gunicorn config.wsgi:application
+   ```
+4. Environment variables on the web service:
+
+   | Variable | Value |
+   |---|---|
+   | `DATABASE_URL` | The database's **Internal** URL |
+   | `SECRET_KEY` | A new, strong secret |
+   | `DEBUG` | `False` (only the text `True` turns debug on) |
+   | `PYTHON_VERSION` | Optional, to pin the Python version |
+
+5. Do not set the `DB_*` variables on Render.
+
+To run management commands (`createsuperuser`, `seed_demo`) from your computer against the hosted database, set `DATABASE_URL` to the database's **External** URL in that terminal window only, then clear it afterwards.
+
+Free Render databases expire after a limited period, so export your data (`dumpdata`) or upgrade the plan if you want to keep it.
+
+---
+
+## Security notes
+
+- Every API view checks the user's role through `IsPatient`, `IsDoctor` or `IsAdminRole`. The admin permission checks the `role` field, not `is_superuser`.
+- Roles are assigned by the server. Public registration creates patients, and doctors can only be created by an admin through the protected endpoint.
+- Patients and doctors can only read or change their own appointments and time off.
+- A conditional unique constraint stops two booked appointments from sharing the same doctor, date and time.
+- Secrets come from environment variables. Keep `.env` out of version control.
