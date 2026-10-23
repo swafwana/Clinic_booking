@@ -13,6 +13,7 @@ from .views import (
     DoctorTimeOffDeleteView,
     DoctorTimeOffListCreateView,
     DoctorViewSet,
+    AdminDoctorCreateView
 )
 
 router = DefaultRouter()
@@ -36,4 +37,5 @@ urlpatterns = [
     path("doctor/time-off/<int:pk>/", DoctorTimeOffDeleteView.as_view()),
     path("dashboard/stats/", AdminStatsView.as_view()),
     path("dashboard/appointments/", AdminAppointmentListView.as_view()),
+    path("dashboard/doctors/", views.AdminDoctorCreateView.as_view()),
 ]

@@ -16,7 +16,20 @@
       <div class="stat-value"><i class="fa-solid fa-spinner fa-spin"></i></div>
     </li>
   </ul>
-
+  <h2><i class="fa-solid fa-user-plus"></i> Add Doctor</h2>
+<form id="doctor-form" class="filter-card">
+  {% csrf_token %}
+  <div><label>Username</label><input name="username" class="form-input" required></div>
+  <div><label>First name</label><input name="first_name" class="form-input" required></div>
+  <div><label>Last name</label><input name="last_name" class="form-input"></div>
+  <div><label>Email</label><input name="email" type="email" class="form-input"></div>
+  <div><label>Specialty</label><input name="specialty" class="form-input" required></div>
+  <div><label>Slot minutes</label><input name="slot_minutes" type="number" value="30" min="5" max="120" class="form-input"></div>
+  <div><label>Temporary password</label><input name="password" type="password" class="form-input" required></div>
+  <button type="submit" class="btn btn-primary btn-sm" style="margin-top:auto;">
+    <i class="fa-solid fa-plus"></i> Create doctor
+  </button>
+</form>
   <h2><i class="fa-solid fa-user-doctor"></i> Doctor Workload & Availability</h2>
   <div class="table-container">
     <table class="data-table">
@@ -185,6 +198,7 @@
     }
 
     async function loadDoctorOptions() {
+      fDoctor.length = 1;   // keep only "All Doctors"
       const res = await fetch("/api/doctors/");
       if (!res.ok) return;
       for (const d of await res.json()) {
@@ -262,7 +276,40 @@
       updateSortIcon();
       loadAppointments();
     });
+    const doctorForm = document.getElementById("doctor-form");
 
+    doctorForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const fd = new FormData(doctorForm);
+    const csrf = fd.get("csrfmiddlewaretoken");
+    const body = Object.fromEntries(fd.entries());
+    delete body.csrfmiddlewaretoken;
+    body.slot_minutes = Number(body.slot_minutes) || 30;
+
+    const res = await fetch("/api/dashboard/doctors/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-CSRFToken": csrf },
+        body: JSON.stringify(body),
+    });
+
+    const box = document.createElement("div");
+    if (res.ok) {
+        const d = await res.json();
+        box.className = "alert alert-success";
+        box.textContent = `${d.name} created. Give them the username and temporary password.`;
+        doctorForm.reset();
+        doctorForm.slot_minutes.value = 30;
+        loadStats();
+        loadDoctorOptions();
+    } else {
+        const err = await res.json().catch(() => ({}));
+        box.className = "alert alert-danger";
+        box.textContent = Object.entries(err)
+        .map(([k, v]) => `${k}: ${[].concat(v).join(" ")}`)
+        .join(" | ") || "Could not create doctor.";
+    }
+    message.replaceChildren(box);
+    });
     loadStats();
     loadDoctorOptions();
     loadAppointments();

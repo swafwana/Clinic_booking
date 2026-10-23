@@ -17,6 +17,7 @@ from .serializers import (
     DoctorAppointmentSerializer,
     DoctorSerializer,
     TimeOffSerializer,
+    DoctorCreateSerializer
 )
 from .services import get_dashboard_stats, get_free_slots
 
@@ -231,3 +232,12 @@ class AdminAppointmentListView(generics.ListAPIView):
         order = params.get("order", "asc")
         ordering = ("-date", "-time") if order == "desc" else ("date", "time")
         return qs.order_by(*ordering)
+class AdminDoctorCreateView(generics.CreateAPIView):
+    serializer_class = DoctorCreateSerializer
+    permission_classes = [IsAdminRole]
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        doctor = serializer.save()
+        return Response(DoctorSerializer(doctor).data, status=status.HTTP_201_CREATED)

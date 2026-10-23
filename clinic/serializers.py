@@ -1,6 +1,11 @@
 from rest_framework import serializers
 
-from .models import Appointment, Doctor, TimeOff
+from datetime import time
+from django.contrib.auth import get_user_model
+from django.contrib.auth.password_validation import validate_password
+from django.db import transaction
+
+from .models import Appointment, Availability, Doctor, TimeOff
 from .services import get_free_slots
 
 
@@ -80,3 +85,47 @@ class TimeOffSerializer(serializers.ModelSerializer):
         if start and end and start > end:
             raise serializers.ValidationError({"end_date": "End date cannot be earlier than start date."})
         return attrs
+
+class DoctorCreateSerializer(serializers.Serializer):
+    username = serializers.CharField(max_length=150)
+    first_name = serializers.CharField(max_length=150)
+    last_name = serializers.CharField(max_length=150, required=False, allow_blank=True)
+    email = serializers.EmailField(required=False, allow_blank=True)
+    password = serializers.CharField(write_only=True)
+    specialty = serializers.CharField(max_length=100)
+    bio = serializers.CharField(required=False, allow_blank=True)
+    slot_minutes = serializers.IntegerField(min_value=5, max_value=120, default=30)
+
+    def validate_username(self, value):
+        if get_user_model().objects.filter(username__iexact=value).exists():
+            raise serializers.ValidationError("This username is already taken.")
+        return value
+
+    def validate_password(self, value):
+        validate_password(value)
+        return value
+
+    @transaction.atomic
+    def create(self, validated_data):
+        User = get_user_model()
+        user = User.objects.create_user(
+            username=validated_data["username"],
+            password=validated_data["password"],
+            first_name=validated_data["first_name"],
+            last_name=validated_data.get("last_name", ""),
+            email=validated_data.get("email", ""),
+            role="doctor",  # set by the server, never by the browser
+        )
+        doctor = Doctor.objects.create(
+            user=user,
+            specialty=validated_data["specialty"],
+            bio=validated_data.get("bio", ""),
+            slot_minutes=validated_data["slot_minutes"],
+        )
+        # Default hours Mon-Fri 09:00-17:00 so the doctor has bookable slots.
+        # Change them later in Django admin under Availability.
+        Availability.objects.bulk_create([
+            Availability(doctor=doctor, weekday=d, start_time=time(9, 0), end_time=time(17, 0))
+            for d in range(5)
+        ])
+        return doctor
