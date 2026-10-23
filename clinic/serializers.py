@@ -7,6 +7,7 @@ from django.db import transaction
 
 from .models import Appointment, Availability, Doctor, TimeOff
 from .services import get_free_slots
+from accounts.models import User
 
 
 class DoctorSerializer(serializers.ModelSerializer):
@@ -97,7 +98,7 @@ class DoctorCreateSerializer(serializers.Serializer):
     slot_minutes = serializers.IntegerField(min_value=5, max_value=120, default=30)
 
     def validate_username(self, value):
-        if get_user_model().objects.filter(username__iexact=value).exists():
+        if User.objects.filter(username__iexact=value).exists():
             raise serializers.ValidationError("This username is already taken.")
         return value
 
@@ -107,14 +108,14 @@ class DoctorCreateSerializer(serializers.Serializer):
 
     @transaction.atomic
     def create(self, validated_data):
-        User = get_user_model()
+        
         user = User.objects.create_user(
             username=validated_data["username"],
             password=validated_data["password"],
             first_name=validated_data["first_name"],
             last_name=validated_data.get("last_name", ""),
             email=validated_data.get("email", ""),
-            role="doctor",  # set by the server, never by the browser
+            role=User.Role.DOCTOR,  # set by the server, never by the browser,  # set by the server, never by the browser
         )
         doctor = Doctor.objects.create(
             user=user,
