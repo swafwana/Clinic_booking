@@ -83,8 +83,9 @@
 
         const specialty = document.createElement("span");
         specialty.className = "specialty-badge";
-        specialty.innerHTML = `<i class="fa-solid fa-award"></i> ${doctor.specialty}`;
-
+        const icon = document.createElement("i");
+        icon.className = "fa-solid fa-award";
+        specialty.append(icon, " " + doctor.specialty);
         info.append(name, specialty);
         top.append(avatar, info);
 
